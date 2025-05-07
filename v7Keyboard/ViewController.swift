@@ -27,9 +27,7 @@ class ViewController: UIViewController {
 	
 	func setupUI(){
 		instructions.text = """
-		⚫ Open the settings app
-		
-		⚫ Go General -> Keyboard -> Keyboards -> Add New Keyboard
+		⚫ Open Settings -> General -> Keyboard -> Keyboards -> Add New Keyboard
 		
 		⚫ Add CustomKeyboard
 		
