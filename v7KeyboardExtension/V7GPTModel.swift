@@ -18,7 +18,7 @@ class GPTModel {
     private let renumCrtList: [[Any]?]
     private let toneMarks = [
         "◌́": [1, 6],  // Tone ◌́ maps to both 1 and 6
-        "◌": [0],      // Tone ◌ maps to 0
+        "◌": [0],     // Tone ◌ maps to 0
         "◌̀": [2],     // Tone ◌̀ maps to 2
         "◌̣": [5, 7],  // Tone ◌̣ maps to both 5 and 7
         "◌̃": [4],     // Tone ◌̃ maps to 4
@@ -79,7 +79,7 @@ class GPTModel {
 
         let filtered = accept(raw: raw, outputTokens: allRankedIndices)
 
-        let predictions = filtered.prefix(16).compactMap { idx -> String? in
+        let predictions = filtered.prefix(50).compactMap { idx -> String? in
             guard idx < renumList.count else { return nil }
             return renumList[idx]
         }

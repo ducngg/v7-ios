@@ -9,6 +9,9 @@ import Foundation
 import UIKit
 
 enum Constants{
+    static let MAX_SEQUENCE_LEN = 32
+//    static let MODEL = "v7gpt-large-20250511"
+    static let MODEL = "v7gpt-1.3"
 	
 	static let keyNormalColour: UIColor = .white
 	static let keyPressedColour: UIColor = .lightText
@@ -17,20 +20,20 @@ enum Constants{
 	static let letterKeys = [
 		["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"], 
 		["a", "s", "d", "f", "g","h", "j", "k", "l"],
-		["⬆️", "z", "x", "c", "v", "b", "n", "m", "⌫"],
-		["123", "🌐", "space", "↩"]
+		["⇧", "z", "x", "c", "v", "b", "n", "m", "⌫"],
+		["123", "🌐", "dấu cách", "⏎"]
 	]
 	static let numberKeys = [
 		["1", "2", "3", "4", "5", "6", "7", "8", "9", "0",],
 		["-", "/", ":", ";", "(", ")" ,",", "$", "&", "@", "\""],
 		["#+=",".", ",", "?", "!", "\'", "⌫"],
-		["ABC", "🌐", "space", "↩"]
+		["ABC", "🌐", "dấu cách", "⏎"]
 	]
 	
 	static let symbolKeys = [
 		["[", "]", "{", "}", "#", "%", "^", "*", "+", "="],
 		["_", "\\", "|", "~", "<", ">", "€", "£", "¥", "·"],
 		["123",".", ",", "?", "!", "\'", "⌫"],
-		["ABC", "🌐", "space", "↩"]
+		["ABC", "🌐", "dấu cách", "⏎"]
 	]
 }

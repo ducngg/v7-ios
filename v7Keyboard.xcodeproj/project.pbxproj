@@ -17,6 +17,12 @@
 		38BD215922D5935A00C6795D /* Keyboard.xib in Resources */ = {isa = PBXBuildFile; fileRef = 38BD215822D5935A00C6795D /* Keyboard.xib */; };
 		38BD215B22D5A26900C6795D /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38BD215A22D5A26900C6795D /* Constants.swift */; };
 		38DD94F122D6A40000FF8845 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DD94F022D6A40000FF8845 /* Extensions.swift */; };
+		893DB0092DCBD26800747C34 /* V7GPTModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 893DB0082DCBD25C00747C34 /* V7GPTModel.swift */; };
+		893DB00D2DCBD78B00747C34 /* renum_crt.json in Resources */ = {isa = PBXBuildFile; fileRef = 893DB00C2DCBD78B00747C34 /* renum_crt.json */; };
+		893DB00E2DCBD78B00747C34 /* enum.json in Resources */ = {isa = PBXBuildFile; fileRef = 893DB00A2DCBD78B00747C34 /* enum.json */; };
+		893DB00F2DCBD78B00747C34 /* renum.json in Resources */ = {isa = PBXBuildFile; fileRef = 893DB00B2DCBD78B00747C34 /* renum.json */; };
+		89C61BD32DCF2E1500F750EC /* v7gpt-1.3.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 89C61BD22DCF2E1500F750EC /* v7gpt-1.3.mlpackage */; };
+		89C61BD52DD10FF500F750EC /* v7gpt-large-20250511.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 89C61BD42DD10FF500F750EC /* v7gpt-large-20250511.mlpackage */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -57,6 +63,12 @@
 		38BD215822D5935A00C6795D /* Keyboard.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = Keyboard.xib; sourceTree = "<group>"; };
 		38BD215A22D5A26900C6795D /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
 		38DD94F022D6A40000FF8845 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
+		893DB0082DCBD25C00747C34 /* V7GPTModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = V7GPTModel.swift; sourceTree = "<group>"; };
+		893DB00A2DCBD78B00747C34 /* enum.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = enum.json; sourceTree = "<group>"; };
+		893DB00B2DCBD78B00747C34 /* renum.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = renum.json; sourceTree = "<group>"; };
+		893DB00C2DCBD78B00747C34 /* renum_crt.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = renum_crt.json; sourceTree = "<group>"; };
+		89C61BD22DCF2E1500F750EC /* v7gpt-1.3.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = "v7gpt-1.3.mlpackage"; sourceTree = "<group>"; };
+		89C61BD42DD10FF500F750EC /* v7gpt-large-20250511.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = "v7gpt-large-20250511.mlpackage"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -111,6 +123,12 @@
 		38BD214D22D592CA00C6795D /* v7KeyboardExtension */ = {
 			isa = PBXGroup;
 			children = (
+				89C61BD42DD10FF500F750EC /* v7gpt-large-20250511.mlpackage */,
+				89C61BD22DCF2E1500F750EC /* v7gpt-1.3.mlpackage */,
+				893DB00A2DCBD78B00747C34 /* enum.json */,
+				893DB00B2DCBD78B00747C34 /* renum.json */,
+				893DB00C2DCBD78B00747C34 /* renum_crt.json */,
+				893DB0082DCBD25C00747C34 /* V7GPTModel.swift */,
 				38BD214E22D592CA00C6795D /* KeyboardViewController.swift */,
 				38BD215022D592CA00C6795D /* Info.plist */,
 				38BD215822D5935A00C6795D /* Keyboard.xib */,
@@ -211,6 +229,9 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				893DB00D2DCBD78B00747C34 /* renum_crt.json in Resources */,
+				893DB00E2DCBD78B00747C34 /* enum.json in Resources */,
+				893DB00F2DCBD78B00747C34 /* renum.json in Resources */,
 				38BD215922D5935A00C6795D /* Keyboard.xib in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -232,7 +253,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				38BD214F22D592CA00C6795D /* KeyboardViewController.swift in Sources */,
+				893DB0092DCBD26800747C34 /* V7GPTModel.swift in Sources */,
 				38BD215B22D5A26900C6795D /* Constants.swift in Sources */,
+				89C61BD32DCF2E1500F750EC /* v7gpt-1.3.mlpackage in Sources */,
+				89C61BD52DD10FF500F750EC /* v7gpt-large-20250511.mlpackage in Sources */,
 				38DD94F122D6A40000FF8845 /* Extensions.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
