@@ -11,8 +11,10 @@ import UIKit
 enum Constants{
     static let MAX_SEQUENCE_LEN = 32
 //    static let MODEL = "v7gpt-large-20250511"
-    static let MODEL = "v7gpt-1.3"
-	
+    static let MODEL = "v7gpt-2.1-large-20250827"
+    static let TOP_K = 16
+    static let MAX_FILTER_ITERATE = 2048
+
 	static let keyNormalColour: UIColor = .white
 	static let keyPressedColour: UIColor = .lightText
 	static let specialKeyNormalColour: UIColor = .gray
@@ -36,4 +38,6 @@ enum Constants{
 		["123",".", ",", "?", "!", "\'", "⌫"],
 		["ABC", "🌐", "dấu cách", "⏎"]
 	]
+    
+    static let allowedRadialKeys: Set<String> = Set((97...122).map { String(UnicodeScalar($0)!) }) // "a"..."z"
 }

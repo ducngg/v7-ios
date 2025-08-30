@@ -17,12 +17,16 @@
 		38BD215922D5935A00C6795D /* Keyboard.xib in Resources */ = {isa = PBXBuildFile; fileRef = 38BD215822D5935A00C6795D /* Keyboard.xib */; };
 		38BD215B22D5A26900C6795D /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38BD215A22D5A26900C6795D /* Constants.swift */; };
 		38DD94F122D6A40000FF8845 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DD94F022D6A40000FF8845 /* Extensions.swift */; };
+		89195C7A2E5F5F3600DEBD52 /* renum_21869.json in Resources */ = {isa = PBXBuildFile; fileRef = 89195C792E5F5F3600DEBD52 /* renum_21869.json */; };
+		89195C7B2E5F5F3600DEBD52 /* enum_21869.json in Resources */ = {isa = PBXBuildFile; fileRef = 89195C782E5F5F3600DEBD52 /* enum_21869.json */; };
+		89195C7C2E5F765C00DEBD52 /* enum_21869.json in Resources */ = {isa = PBXBuildFile; fileRef = 89195C782E5F5F3600DEBD52 /* enum_21869.json */; };
+		89195C7D2E5F766400DEBD52 /* renum_21869.json in Resources */ = {isa = PBXBuildFile; fileRef = 89195C792E5F5F3600DEBD52 /* renum_21869.json */; };
+		89195C7E2E5F766C00DEBD52 /* renum_crt.json in Resources */ = {isa = PBXBuildFile; fileRef = 893DB00C2DCBD78B00747C34 /* renum_crt.json */; };
+		89195C802E61ABFC00DEBD52 /* Logger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89195C7F2E61ABF900DEBD52 /* Logger.swift */; };
+		89195C892E61DF9100DEBD52 /* v7gpt-2.1-large-20250827-fp16.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 89195C882E61DF9100DEBD52 /* v7gpt-2.1-large-20250827-fp16.mlpackage */; };
 		893DB0092DCBD26800747C34 /* V7GPTModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 893DB0082DCBD25C00747C34 /* V7GPTModel.swift */; };
 		893DB00D2DCBD78B00747C34 /* renum_crt.json in Resources */ = {isa = PBXBuildFile; fileRef = 893DB00C2DCBD78B00747C34 /* renum_crt.json */; };
-		893DB00E2DCBD78B00747C34 /* enum.json in Resources */ = {isa = PBXBuildFile; fileRef = 893DB00A2DCBD78B00747C34 /* enum.json */; };
-		893DB00F2DCBD78B00747C34 /* renum.json in Resources */ = {isa = PBXBuildFile; fileRef = 893DB00B2DCBD78B00747C34 /* renum.json */; };
-		89C61BD32DCF2E1500F750EC /* v7gpt-1.3.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 89C61BD22DCF2E1500F750EC /* v7gpt-1.3.mlpackage */; };
-		89C61BD52DD10FF500F750EC /* v7gpt-large-20250511.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 89C61BD42DD10FF500F750EC /* v7gpt-large-20250511.mlpackage */; };
+		8994578C2E08335C00B2DBEF /* V7GPTTokenizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8994578B2E08335300B2DBEF /* V7GPTTokenizer.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -63,12 +67,13 @@
 		38BD215822D5935A00C6795D /* Keyboard.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = Keyboard.xib; sourceTree = "<group>"; };
 		38BD215A22D5A26900C6795D /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
 		38DD94F022D6A40000FF8845 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
+		89195C782E5F5F3600DEBD52 /* enum_21869.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = enum_21869.json; sourceTree = "<group>"; };
+		89195C792E5F5F3600DEBD52 /* renum_21869.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = renum_21869.json; sourceTree = "<group>"; };
+		89195C7F2E61ABF900DEBD52 /* Logger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logger.swift; sourceTree = "<group>"; };
+		89195C882E61DF9100DEBD52 /* v7gpt-2.1-large-20250827-fp16.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = "v7gpt-2.1-large-20250827-fp16.mlpackage"; sourceTree = "<group>"; };
 		893DB0082DCBD25C00747C34 /* V7GPTModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = V7GPTModel.swift; sourceTree = "<group>"; };
-		893DB00A2DCBD78B00747C34 /* enum.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = enum.json; sourceTree = "<group>"; };
-		893DB00B2DCBD78B00747C34 /* renum.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = renum.json; sourceTree = "<group>"; };
 		893DB00C2DCBD78B00747C34 /* renum_crt.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = renum_crt.json; sourceTree = "<group>"; };
-		89C61BD22DCF2E1500F750EC /* v7gpt-1.3.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = "v7gpt-1.3.mlpackage"; sourceTree = "<group>"; };
-		89C61BD42DD10FF500F750EC /* v7gpt-large-20250511.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = "v7gpt-large-20250511.mlpackage"; sourceTree = "<group>"; };
+		8994578B2E08335300B2DBEF /* V7GPTTokenizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = V7GPTTokenizer.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -123,13 +128,14 @@
 		38BD214D22D592CA00C6795D /* v7KeyboardExtension */ = {
 			isa = PBXGroup;
 			children = (
-				89C61BD42DD10FF500F750EC /* v7gpt-large-20250511.mlpackage */,
-				89C61BD22DCF2E1500F750EC /* v7gpt-1.3.mlpackage */,
-				893DB00A2DCBD78B00747C34 /* enum.json */,
-				893DB00B2DCBD78B00747C34 /* renum.json */,
+				89195C882E61DF9100DEBD52 /* v7gpt-2.1-large-20250827-fp16.mlpackage */,
+				89195C782E5F5F3600DEBD52 /* enum_21869.json */,
+				89195C792E5F5F3600DEBD52 /* renum_21869.json */,
 				893DB00C2DCBD78B00747C34 /* renum_crt.json */,
 				893DB0082DCBD25C00747C34 /* V7GPTModel.swift */,
+				8994578B2E08335300B2DBEF /* V7GPTTokenizer.swift */,
 				38BD214E22D592CA00C6795D /* KeyboardViewController.swift */,
+				89195C7F2E61ABF900DEBD52 /* Logger.swift */,
 				38BD215022D592CA00C6795D /* Info.plist */,
 				38BD215822D5935A00C6795D /* Keyboard.xib */,
 				38BD215A22D5A26900C6795D /* Constants.swift */,
@@ -220,8 +226,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				38BD214122D5908100C6795D /* LaunchScreen.storyboard in Resources */,
+				89195C7C2E5F765C00DEBD52 /* enum_21869.json in Resources */,
 				38BD213E22D5908100C6795D /* Assets.xcassets in Resources */,
+				89195C7D2E5F766400DEBD52 /* renum_21869.json in Resources */,
 				38BD213922D5907F00C6795D /* Main.storyboard in Resources */,
+				89195C7E2E5F766C00DEBD52 /* renum_crt.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -230,8 +239,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				893DB00D2DCBD78B00747C34 /* renum_crt.json in Resources */,
-				893DB00E2DCBD78B00747C34 /* enum.json in Resources */,
-				893DB00F2DCBD78B00747C34 /* renum.json in Resources */,
+				89195C7A2E5F5F3600DEBD52 /* renum_21869.json in Resources */,
+				89195C7B2E5F5F3600DEBD52 /* enum_21869.json in Resources */,
 				38BD215922D5935A00C6795D /* Keyboard.xib in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -252,12 +261,13 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				89195C892E61DF9100DEBD52 /* v7gpt-2.1-large-20250827-fp16.mlpackage in Sources */,
 				38BD214F22D592CA00C6795D /* KeyboardViewController.swift in Sources */,
 				893DB0092DCBD26800747C34 /* V7GPTModel.swift in Sources */,
 				38BD215B22D5A26900C6795D /* Constants.swift in Sources */,
-				89C61BD32DCF2E1500F750EC /* v7gpt-1.3.mlpackage in Sources */,
-				89C61BD52DD10FF500F750EC /* v7gpt-large-20250511.mlpackage in Sources */,
+				8994578C2E08335C00B2DBEF /* V7GPTTokenizer.swift in Sources */,
 				38DD94F122D6A40000FF8845 /* Extensions.swift in Sources */,
+				89195C802E61ABFC00DEBD52 /* Logger.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -415,6 +425,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 3RGBSXCM2J;
 				INFOPLIST_FILE = "$(SRCROOT)/v7Keyboard/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -434,6 +445,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 3RGBSXCM2J;
 				INFOPLIST_FILE = "$(SRCROOT)/v7Keyboard/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -448,10 +460,13 @@
 		38BD215522D592CA00C6795D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 3RGBSXCM2J;
+				ENABLE_ON_DEMAND_RESOURCES = NO;
 				INFOPLIST_FILE = "$(SRCROOT)/v7KeyboardExtension/Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
+				INSTALL_PATH = "$(LOCAL_APPS_DIR)";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -468,10 +483,13 @@
 		38BD215622D592CA00C6795D /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 3RGBSXCM2J;
+				ENABLE_ON_DEMAND_RESOURCES = NO;
 				INFOPLIST_FILE = "$(SRCROOT)/v7KeyboardExtension/Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
+				INSTALL_PATH = "$(LOCAL_APPS_DIR)";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

@@ -26,16 +26,11 @@ class ViewController: UIViewController {
 	}
 	
 	func setupUI(){
+        print("Hello v7")
 		instructions.text = """
-		⚫ Open Settings -> General -> Keyboard -> Keyboards -> Add New Keyboard
+		- Open Settings -> General -> Keyboard -> Keyboards -> Add New Keyboard
 		
-		⚫ Add CustomKeyboard
-		
-		⚫ Start typing in any app
-		
-		⚫ Press 🌐 to switch to the CustomKeyboard keyboard
-		
-		⚫ Tap this text to start typing!
+		- Add CustomKeyboard-Start typing in any app- Press - to switch to the CustomKeyboard keyboard- Tap this text to start typing!
 		"""
 	}
 

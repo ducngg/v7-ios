@@ -6,6 +6,18 @@
 //
 
 import UIKit
+import CoreML
+
+func model_predict(model: v7gpt_2_1_large_20250827_fp16, input: MLMultiArray) -> [Int]? {
+    do {
+        let output = try model.prediction(input_token_ids: input)
+        return output.ranked_desc_token_idsShapedArray.scalars.map { Int($0) }
+    } catch {
+        keyboardLogger.error("Prediction error: \(error.localizedDescription)")
+        return nil
+    }
+}
+
 
 extension UILabel {
     func padding(left: CGFloat, right: CGFloat, top: CGFloat, bottom: CGFloat) {
@@ -97,11 +109,36 @@ class KeyboardViewController: UIInputViewController {
 	var paddingViews: [UIButton] = []
 	var backspaceTimer: Timer?
     
-    let gptModel = GPTModel(modelName: Constants.MODEL)
-    var context: [String] = ["bây", "giờ"]
-    var buffer: [[String]] = []
-    var cumulated_terms: String = ""
-    var current_term: String = ""
+    let gptTokenizer = GPTTokenizer()
+
+    // Lazily load Core ML model to avoid memory issues at startup
+    lazy var model: v7gpt_2_1_large_20250827_fp16? = {
+        let config = MLModelConfiguration()
+//        config.computeUnits = .cpuAndNeuralEngine   // avoids GPU memory overhead
+        config.computeUnits = .cpuOnly
+//        config.computeUnits = .cpuAndGPU
+        config.allowLowPrecisionAccumulationOnGPU = true
+        
+        do {
+            return try v7gpt_2_1_large_20250827_fp16(configuration: config)
+        } catch {
+            keyboardLogger.error("⚠️ Failed to load model: \(error.localizedDescription)")
+            return nil
+        }
+    }()
+    
+    let defaultContext: String = "bây giờ"
+    var lastInputArray: MLMultiArray?
+    
+    var toneInfoLabel: UILabel?
+    var currentTone: String = "" {
+        didSet {
+            toneInfoLabel?.text = currentTone.isEmpty ? "–" : currentTone
+        }
+    }
+
+    var currentPrediction: [Int] = []
+    var pattern: String = ""
 
 	enum KeyboardState{
 		case letters
@@ -132,6 +169,8 @@ class KeyboardViewController: UIInputViewController {
     }
 
     override func viewDidLoad() {
+//        NSLog("%0.4f", CGFloat.pi)
+
         super.viewDidLoad()
         proxy = textDocumentProxy as UITextDocumentProxy
 
@@ -143,6 +182,9 @@ class KeyboardViewController: UIInputViewController {
             action: #selector(handleInputModeList(from:with:)),
             for: .allTouchEvents
         )
+        
+        updatePattern()
+        predict()
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -159,42 +201,66 @@ class KeyboardViewController: UIInputViewController {
         view.addConstraint(heightConstraint)
     }
 
-    override func viewWillLayoutSubviews() {
-        super.viewWillLayoutSubviews()
+//    override func viewWillLayoutSubviews() {
+//        super.viewWillLayoutSubviews()
+//        self.nextKeyboardButton.isHidden = !self.needsInputModeSwitchKey
+//    }
+    
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        updateNextKeyboardVisibility()
+    }
+
+    func updateNextKeyboardVisibility() {
         self.nextKeyboardButton.isHidden = !self.needsInputModeSwitchKey
     }
+
     
     func setupSuggestionBar() {
         if suggestionBar != nil { return }
 
-        // Create a scroll view to contain the stack view
+        let container = UIStackView()
+        container.axis = .horizontal
+        container.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(container)
+
+        // 🔹 Fixed info label
+        let infoLabel = UILabel()
+        infoLabel.text = "–"   // Default when no tone selected
+        infoLabel.textAlignment = .center
+        infoLabel.font = UIFont.systemFont(ofSize: 16, weight: .medium)
+        infoLabel.widthAnchor.constraint(equalToConstant: 40).isActive = true
+        container.addArrangedSubview(infoLabel)
+        self.toneInfoLabel = infoLabel
+
+        // 🔹 Scroll view for suggestions
         let scrollView = UIScrollView()
-        scrollView.showsHorizontalScrollIndicator = false  // Hide scroll indicator
+        scrollView.showsHorizontalScrollIndicator = false
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         scrollView.backgroundColor = UIColor(white: 0.9, alpha: 1.0)
-        view.addSubview(scrollView)
+        container.addArrangedSubview(scrollView)
 
-        // Create the stack view inside the scroll view
+        // 🔹 Stack view inside scroll view
         let bar = UIStackView()
         bar.axis = .horizontal
-        bar.backgroundColor = .clear  // Transparent background
         bar.distribution = .fill
         bar.spacing = 8
         bar.alignment = .center
         bar.isLayoutMarginsRelativeArrangement = true
-        bar.layoutMargins = UIEdgeInsets(top: 0, left: 4, bottom: 0, right: 4)  // Adjust padding to fit the keyboard
+        bar.layoutMargins = UIEdgeInsets(top: 0, left: 4, bottom: 0, right: 4)
         bar.translatesAutoresizingMaskIntoConstraints = false
         suggestionBar = bar
         scrollView.addSubview(bar)
 
-        // Add constraints for the scroll view and stack view
+        // 🔹 Constraints
         NSLayoutConstraint.activate([
-            scrollView.topAnchor.constraint(equalTo: view.topAnchor, constant: 0),
-            scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 0),
-            scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: 0),
-            scrollView.heightAnchor.constraint(equalToConstant: 40),
+            container.topAnchor.constraint(equalTo: view.topAnchor),
+            container.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            container.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            container.heightAnchor.constraint(equalToConstant: 40),
 
-            // Stack view constraints inside the scroll view
+            scrollView.heightAnchor.constraint(equalTo: container.heightAnchor),
+
             bar.topAnchor.constraint(equalTo: scrollView.topAnchor),
             bar.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
             bar.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
@@ -203,30 +269,23 @@ class KeyboardViewController: UIInputViewController {
         ])
     }
 
-    func updateSuggestions(_ suggestions: [String]) {
+    func updateSuggestions() {
+        keyboardLogger.debug("sug")
+
         // Clear previous buttons
         suggestionBar?.arrangedSubviews.forEach { $0.removeFromSuperview() }
 
-        // 🟦 Show buffer as one joined label from predictions[0]
-        let bufferText = buffer.dropLast().map { $0[0] }.joined(separator: " ")
-        if !bufferText.isEmpty {
-            let label = UILabel()
-            label.text = bufferText
-            label.font = UIFont.systemFont(ofSize: 16, weight: .light)
-            label.textColor = .gray
-            label.backgroundColor = .clear
-            label.layer.cornerRadius = 6
-            label.clipsToBounds = true
-            label.textAlignment = .center
-            label.setContentHuggingPriority(.defaultHigh, for: .horizontal)
-//            label.layer.borderColor = UIColor.gray.cgColor
-//            label.layer.borderWidth = 0.5
-            label.padding(left: 12, right: 12, top: 4, bottom: 4)
-            suggestionBar?.addArrangedSubview(label)
-        }
+        guard let tokenizer = self.gptTokenizer else { return }
 
-        // 🟦 Show tappable suggestions
-        for word in suggestions {
+        // 🟦 Filter predictions based on pattern + tone
+        let filtered = tokenizer.filter(
+            pattern: pattern,
+            predictions: currentPrediction,
+            toneMark: currentTone
+        )
+
+        // 🟦 Show only top-k suggestions
+        for word in filtered.prefix(Constants.TOP_K) {
             let button = UIButton(type: .system)
             button.setTitle(word, for: .normal)
             button.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .regular)
@@ -241,210 +300,141 @@ class KeyboardViewController: UIInputViewController {
         suggestionBar?.invalidateIntrinsicContentSize()
     }
 
-
     @objc func didTapSuggestion(_ sender: UIButton) {
         guard let word = sender.title(for: .normal) else { return }
 
-        // Step 1: Remove current text
-        for _ in 0..<cumulated_terms.count {
-            proxy.deleteBackward()
+        // 🔸 Delete current pattern
+        for _ in 0..<pattern.count {
+            deleteBackwardAndTriggerChange()
         }
 
-        // Step 2: Insert all buffer words and the selected one
-        let allWords = buffer.dropLast().compactMap { $0.first } + [word]
-        let fullText = allWords.joined(separator: " ") + " "
-        proxy.insertText(fullText)
-
-        // Step 3: Update context
-        context.append(contentsOf: allWords)
-
-        // Step 4: Reset state
-        buffer.removeAll()
-        current_term = ""
-        cumulated_terms = ""
+        // 🔸 Insert selected word + space
+        insertTextAndTriggerChange(word + " ")
         suggestionBar?.arrangedSubviews.forEach { $0.removeFromSuperview() }
     }
 
-
-    func predict(for input: String) {
-//        let rawContext = proxy.documentContextBeforeInput ?? "tôi"
-//
-//        let contextWords = rawContext.split(separator: " ")
-//        let trimmedContext = contextWords.suffix(32).joined(separator: " ")
-//        
-        let joinedContext = (context + buffer.compactMap { $0.first })
-            .suffix(32).joined(separator: " ")
-//        proxy.insertText(joinedContext)
-
-        DispatchQueue.global(qos: .userInitiated).async {
-            guard let model = self.gptModel else { return }
-            let predictions = model.predict(raw: input, context: joinedContext)
-
-            DispatchQueue.main.async {
-                self.updateSuggestions(predictions)
-            }
-            self.buffer.append(predictions)
-        }
-    }
-
-
     
-    let variantCharacters: [String: [String]] = [
-        "d": ["d", "đ"],
-        "k": ["k", "kh"],
-        "n": ["nh", "n", "ng"],
-        "c": ["c", "ch"],
-        "t": ["tr", "t", "th"],
-    ]
-    let radialOnlyKeys: Set<String> = [
-        "q", "e", "r", "y", "u", "i", "o", "p",
-        "a", "s", "f", "g", "h", "l",
-        "z", "x", "v", "b", "m",
-    ]  // Customize your keys here
+    func emitTopPrediction() {
+        guard let firstButton = suggestionBar?.arrangedSubviews.first as? UIButton else { return }
 
-    var variantKeyButton: UIButton?  // currently touched key with variant
-    var variantOptionBox: UIView?
-    var selectedVariantButton: UIButton?
-    var radialMenu: RadialMenuView?
+        // Trigger the same logic as a user tap
+        didTapSuggestion(firstButton)
+    }
+    
+    // Currently take last char
+    func updatePattern() {
+        let context = (proxy.documentContextBeforeInput ?? "")
+            .replacingOccurrences(of: "\n", with: " ")
 
-    func showVariantBox(variants: [String], over keyFrame: CGRect) {
-        if variantOptionBox == nil {
-            variantOptionBox = UIView()
-            variantOptionBox?.backgroundColor = Constants.keyNormalColour
-            variantOptionBox?.layer.cornerRadius = 8
-            view.addSubview(variantOptionBox!)
-        }
-
-        // Clean old buttons
-        variantOptionBox?.subviews.forEach { $0.removeFromSuperview() }
-
-        let btnWidth: CGFloat = 50
-        let spacing: CGFloat = 10
-        let totalWidth = CGFloat(variants.count) * btnWidth + CGFloat(variants.count - 1) * spacing
-        let boxHeight: CGFloat = 40
-
-        // 🆙 Place the box slightly above the key
-        let boxX = keyFrame.midX - totalWidth / 2
-        var boxY = keyFrame.minY + (boxHeight / 2)
-        if variantKeyButton?.accessibilityLabel == "t" {
-            // ⬇️ Show below the key
-            boxY = keyFrame.minY + (boxHeight / 2)
-        }
-
-        variantOptionBox?.frame = CGRect(x: boxX, y: boxY, width: totalWidth, height: boxHeight)
-        variantOptionBox?.isHidden = false
-
-        for (i, v) in variants.enumerated() {
-            let button = UIButton(type: .custom)
-            button.setTitle(v, for: .normal)
-            button.frame = CGRect(x: CGFloat(i) * (btnWidth + spacing), y: 5, width: btnWidth, height: 30)
-            button.backgroundColor = Constants.keyNormalColour
-            button.setTitleColor(.black, for: .normal)
-            variantOptionBox?.addSubview(button)
+        if let lastChar = context.last, lastChar != " " {
+            pattern = String(lastChar)
+        } else {
+            pattern = ""
         }
     }
 
+    func predict() {
+        // Full cleaned input
+        let fullInput = (proxy.documentContextBeforeInput ?? "")
+            .replacingOccurrences(of: "\n", with: " ")
 
-    @objc func handleVariantPan(_ gesture: UIPanGestureRecognizer) {
+        // Get context before the current pattern
+        let rawContextWithoutPattern: String
+        if pattern.isEmpty || fullInput.hasSuffix(" ") {
+            rawContextWithoutPattern = fullInput
+        } else if fullInput.hasSuffix(pattern) {
+            // If fullInput ends with the pattern, drop it
+            rawContextWithoutPattern = String(fullInput.dropLast(pattern.count))
+        } else if let range = fullInput.range(of: pattern, options: .backwards) {
+            rawContextWithoutPattern = String(fullInput[..<range.lowerBound])
+        } else {
+            rawContextWithoutPattern = fullInput
+        }
+        keyboardLogger.debug("full=[\(fullInput, privacy: .public)] rawContextWithoutPattern=[\(rawContextWithoutPattern, privacy: .public)] ")
+
+        guard let tokenizer = self.gptTokenizer else {
+            keyboardLogger.debug("❌ gptTokenizer is nil")
+            return
+        }
+        var inputArray = tokenizer.tokenize(text: rawContextWithoutPattern)
+
+        if inputArray.count == 0 || rawContextWithoutPattern.trimmingCharacters(in: .whitespaces).isEmpty {
+            inputArray = tokenizer.tokenize(text: self.defaultContext)
+        }
+
+        if tokenizer.isSameInput(inputArray, lastInputArray) {
+            self.updateSuggestions()
+            return
+        }
+
+        lastInputArray = inputArray
+        keyboardLogger.debug("preding")
+        DispatchQueue.global(qos: .userInitiated).async {
+            guard let model = self.model else {
+                keyboardLogger.error("Model is nil")
+                return
+            }
+
+            let start = DispatchTime.now()
+
+            if let predictions = model_predict(model: model, input: inputArray) {
+                let end = DispatchTime.now()
+                let nanoTime = end.uptimeNanoseconds - start.uptimeNanoseconds
+                let timeInMs = Double(nanoTime) / 1_000_000.0
+                keyboardLogger.debug("Prediction time: \(timeInMs, privacy: .public) ms")
+
+                DispatchQueue.main.async {
+                    self.currentPrediction = predictions
+                    self.updateSuggestions()
+                    keyboardLogger.debug("pred done")
+                }
+            } else {
+                keyboardLogger.error("Prediction failed")
+            }
+        }
+    }
+    
+    var radialMenu: RadialMenuView?
+    var radialKeyButton: UIButton?
+
+    @objc func handleKeyPan(_ gesture: UIPanGestureRecognizer) {
         guard let keyButton = gesture.view as? UIButton,
               let keyChar = keyButton.accessibilityLabel,
               let parentView = view else { return }
 
-        variantKeyButton = keyButton
+        radialKeyButton = keyButton
         let keyFrameInView = keyButton.superview?.convert(keyButton.frame, to: parentView) ?? .zero
-        let variants = variantCharacters[keyChar]  // may be nil
-        let shouldShowRadialOnly = radialOnlyKeys.contains(keyChar)
 
         switch gesture.state {
         case .began:
-            hasEnteredRadialMenu = false
-            
-            if let variants = variants {
-                showVariantBox(variants: variants, over: keyFrameInView)
-            } else if shouldShowRadialOnly {
-                showRadialMenu(at: CGPoint(x: keyFrameInView.midX, y: keyFrameInView.midY))
-            }
+            showRadialMenu(at: CGPoint(x: keyFrameInView.midX, y: keyFrameInView.midY))
 
         case .changed:
-            if let variants = variants {
-                let touchInBox = gesture.location(in: variantOptionBox)
-
-                // Only allow variant selection if NOT already dragging in radial menu
-                if !hasEnteredRadialMenu {
-                    for case let btn as UIButton in variantOptionBox?.subviews ?? [] {
-                        if btn.frame.contains(touchInBox) {
-                            highlightVariantButton(btn)
-
-                            if radialMenu?.superview == nil {
-                                let btnFrameInParent = btn.superview?.convert(btn.frame, to: parentView) ?? .zero
-                                showRadialMenu(at: CGPoint(x: btnFrameInParent.midX, y: btnFrameInParent.midY))
-                            }
-
-                            break
-                        }
-                    }
-                }
-
-                // ✅ Always update radial menu if it's visible
-                if radialMenu?.superview != nil {
-                    let touchInRadial = gesture.location(in: radialMenu)
-                    radialMenu?.updateSelection(from: touchInRadial)
-                    
-                    // ✅ Lock variant when entering radial
-                    if radialMenu!.bounds.contains(touchInRadial) {
-                        hasEnteredRadialMenu = true
-                    }
-                }
-                
-            } else if shouldShowRadialOnly {
-                if radialMenu == nil {
-                    showRadialMenu(at: CGPoint(x: keyFrameInView.midX, y: keyFrameInView.midY))
-                }
-
-                let touchInRadial = gesture.location(in: radialMenu)
-                radialMenu?.updateSelection(from: touchInRadial)
-            }
+            let touchInRadial = gesture.location(in: radialMenu)
+            radialMenu?.updateSelection(from: touchInRadial)
 
         case .ended, .cancelled:
+            var term = keyChar
             if let selectedTone = radialMenu?.selectedTone {
-                if let selected = selectedVariantButton {
-                    let variant = selected.title(for: .normal) ?? ""
-                    cumulated_terms += "\(variant)\(selectedTone)"
-                    current_term = "\(variant)\(selectedTone)"
-                } else {
-                    cumulated_terms += "\(keyChar)\(selectedTone)"
-                    current_term = "\(keyChar)\(selectedTone)"
-                }
-                proxy.insertText(current_term)
-                predict(for: current_term)
-            } else if let selected = selectedVariantButton {
-                proxy.insertText(selected.title(for: .normal) ?? "")
+                term = "\(keyChar)"
+                currentTone = selectedTone   // 🔹 updates label automatically
             }
 
-            variantOptionBox?.isHidden = true
-            selectedVariantButton = nil
-            variantKeyButton = nil
+            if pattern != "" {
+                self.emitTopPrediction()
+            }
+            keyboardLogger.debug("\(term, privacy: .public) \(self.currentTone, privacy: .public)")
+            insertTextAndTriggerChange(term)
+
             radialMenu?.removeFromSuperview()
             radialMenu = nil
+            radialKeyButton = nil
 
         default:
             break
         }
     }
 
-
-    func highlightVariantButton(_ button: UIButton) {
-        if selectedVariantButton != button {
-            for case let btn as UIButton in variantOptionBox?.subviews ?? [] {
-                btn.backgroundColor = .clear
-            }
-            button.backgroundColor = .blue
-            selectedVariantButton = button
-        }
-    }
-    
-    //
-    
     func showRadialMenu(at center: CGPoint) {
         if radialMenu == nil {
             radialMenu = RadialMenuView(frame: CGRect(x: 0, y: 0, width: 120, height: 120))
@@ -454,7 +444,7 @@ class KeyboardViewController: UIInputViewController {
         radialMenu?.center = center
         radialMenu?.isHidden = false
     }
-    
+
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let touch = touches.first else { return }
         let point = touch.location(in: radialMenu)
@@ -464,8 +454,8 @@ class KeyboardViewController: UIInputViewController {
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         if let selected = radialMenu?.selectedIndex {
-            print("Selected option: \(selected)")
-            proxy.insertText(String(selected))
+            keyboardLogger.debug("Selected option: \(selected)")
+            insertTextAndTriggerChange(String(selected))
             // You can now trigger the action for that index (0-5)
         }
 
@@ -541,7 +531,6 @@ class KeyboardViewController: UIInputViewController {
             // Extra
 			addPadding(to: stackView2, width: buttonWidth/2, key: "")
             
-            
 		case .numbers:
 			keyboard = Constants.numberKeys
 		case .symbols: 
@@ -556,8 +545,11 @@ class KeyboardViewController: UIInputViewController {
 				button.setTitleColor(.black, for: .normal) 
 				let key = keyboard[row][col]
                 
-                let panGesture = UIPanGestureRecognizer(target: self, action: #selector(handleVariantPan(_:)))
-                button.addGestureRecognizer(panGesture)
+                // ✅ Only add pan gesture if key is in a–z
+                if Constants.allowedRadialKeys.contains(key.lowercased()) {
+                    let panGesture = UIPanGestureRecognizer(target: self, action: #selector(handleKeyPan(_:)))
+                    button.addGestureRecognizer(panGesture)
+                }
                 button.accessibilityLabel = key  // for identifying the key
 
 				let capsKey = keyboard[row][col].capitalized
@@ -567,7 +559,7 @@ class KeyboardViewController: UIInputViewController {
 				button.layer.setValue(false, forKey: "isSpecial")
 				button.setTitle(keyToDisplay, for: .normal)
 				button.layer.borderColor = keyboardView.backgroundColor?.cgColor 
-				button.layer.borderWidth = 4
+                button.layer.borderWidth = 3
 				button.addTarget(self, action: #selector(keyPressedTouchUp), for: .touchUpInside)
 				button.addTarget(self, action: #selector(keyTouchDown), for: .touchDown)
 				button.addTarget(self, action: #selector(keyUntouched), for: .touchDragExit)
@@ -581,12 +573,12 @@ class KeyboardViewController: UIInputViewController {
 				button.layer.cornerRadius = buttonWidth/4
 				keys.append(button)
 				switch row{
-				case 0: stackView1.addArrangedSubview(button)
-				case 1: stackView2.addArrangedSubview(button)
-				case 2: stackView3.addArrangedSubview(button)
-				case 3: stackView4.addArrangedSubview(button)
-				default:
-					break
+                    case 0: stackView1.addArrangedSubview(button)
+                    case 1: stackView2.addArrangedSubview(button)
+                    case 2: stackView3.addArrangedSubview(button)
+                    case 3: stackView4.addArrangedSubview(button)
+                    default:
+                        break
 				}
 				if key == "🌐"{
 					nextKeyboardButton = button
@@ -650,62 +642,9 @@ class KeyboardViewController: UIInputViewController {
 		loadKeys()
 	}
     func handleDeleteButtonPressed() {
-        guard !cumulated_terms.isEmpty else {
-            proxy.deleteBackward()  // fallback if nothing to remove
-            return
-        }
-
-        // 🔸 Delete each character in current_term from the input field
-        for _ in 0..<current_term.count {
-            proxy.deleteBackward()
-        }
-
-        // 🔸 Trim cumulated_terms by current_term + space
-        if cumulated_terms.hasSuffix(current_term) {
-            cumulated_terms.removeLast(current_term.count)
-        }
-
-        // 🔸 Remove last prediction from buffer
-        if !buffer.isEmpty {
-            buffer.removeLast()
-        }
-
-        // 🔸 Update current_term
-        // Find the second-to-last tone character and update current_term
-        let secondToneIndex = findSecondToneIndex()
-        
-        // If there's a valid second tone index, set current_term to the next term
-        if let secondToneRange = secondToneIndex {
-            let newStartIndex = cumulated_terms.index(secondToneRange, offsetBy: 1) // Start after second tone
-            current_term = String(cumulated_terms[newStartIndex...])  // New current_term
-        } else {
-            current_term = cumulated_terms  // Default value if no second tone is found
-        }
-        
-        // 🔸 Update suggestion bar
-        let predictions = buffer.last ?? []
-        updateSuggestions(predictions)
+        // More logic here
+        deleteBackwardAndTriggerChange()
     }
-    
-    func findSecondToneIndex() -> String.Index? {
-        let toneCharacters: Set<Character> = ["◌", "◌́", "◌̀", "◌̣", "◌̃", "◌̉"]
-        var toneIndices = [String.Index]()
-
-        // Find all tone characters in reverse order
-        for index in cumulated_terms.indices.reversed() {
-            let char = cumulated_terms[index]
-            if toneCharacters.contains(char) {
-                toneIndices.append(index)
-                if toneIndices.count == 2 {
-                    break
-                }
-            }
-        }
-
-        // Return the second tone index, if found
-        return toneIndices.count >= 2 ? toneIndices[1] : nil
-    }
-
 	
 	@IBAction func keyPressedTouchUp(_ sender: UIButton) {
 		guard let originalKey = sender.layer.value(forKey: "original") as? String, let keyToDisplay = sender.layer.value(forKey: "keyToDisplay") as? String else {return}
@@ -714,34 +653,35 @@ class KeyboardViewController: UIInputViewController {
 		sender.backgroundColor = isSpecial ? Constants.specialKeyNormalColour : Constants.keyNormalColour
 
 		switch originalKey {
-		case "⌫":
-			if shiftButtonState == .shift {
-				shiftButtonState = .normal
-				loadKeys()
-			}
-            handleDeleteButtonPressed()
-		case "dấu cách":
-			proxy.insertText(" ")
-		case "🌐":
-			break
-		case "⏎":
-			proxy.insertText("\n")
-		case "123":
-			changeKeyboardToNumberKeys()
-		case "ABC":
-			changeKeyboardToLetterKeys()
-		case "#+=":
-			changeKeyboardToSymbolKeys()
-		case "⇧":
-			shiftButtonState = shiftButtonState == .normal ? .shift : .normal
-			loadKeys()
-		default:
-			if shiftButtonState == .shift {
-				shiftButtonState = .normal
-				loadKeys()
-			}
-			proxy.insertText(keyToDisplay)
+            case "⌫":
+                if shiftButtonState == .shift {
+                    shiftButtonState = .normal
+                    loadKeys()
+                }
+                handleDeleteButtonPressed()
+            case "dấu cách":
+                insertTextAndTriggerChange(" ")
+            case "🌐":
+                break
+            case "⏎":
+                insertTextAndTriggerChange("\n")
+            case "123":
+                changeKeyboardToNumberKeys()
+            case "ABC":
+                changeKeyboardToLetterKeys()
+            case "#+=":
+                changeKeyboardToSymbolKeys()
+            case "⇧":
+                shiftButtonState = shiftButtonState == .normal ? .shift : .normal
+                loadKeys()
+            default:
+                if shiftButtonState == .shift {
+                    shiftButtonState = .normal
+                    loadKeys()
+                }
+                insertTextAndTriggerChange(keyToDisplay)
 		}
+        currentTone = ""
 	}
 	
 	@objc func keyMultiPress(_ sender: UIButton, event: UIEvent){
@@ -778,10 +718,21 @@ class KeyboardViewController: UIInputViewController {
 	override func textWillChange(_ textInput: UITextInput?) {
 		// The app is about to change the document's contents. Perform any preparation here.
 	}
+    
+    func insertTextAndTriggerChange(_ text: String) {
+        proxy.insertText(text)
+        self.textDidChange(nil)
+    }
+
+    func deleteBackwardAndTriggerChange() {
+        proxy.deleteBackward()
+        self.textDidChange(nil)
+    }
+
 	
 	override func textDidChange(_ textInput: UITextInput?) {
 		// The app has just changed the document's contents, the document context has been updated.
-		
+//		log("tdc")
 		var textColor: UIColor
 		let proxy = self.textDocumentProxy
 		if proxy.keyboardAppearance == UIKeyboardAppearance.dark {
@@ -790,6 +741,8 @@ class KeyboardViewController: UIInputViewController {
 			textColor = UIColor.black
 		}
 		self.nextKeyboardButton.setTitleColor(textColor, for: [])
-	}
-	
+        
+        self.updatePattern()
+        self.predict()
+    }
 }
