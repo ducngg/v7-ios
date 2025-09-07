@@ -26,6 +26,9 @@ class GPTTokenizer {
     private let specials: String
     private let allowRegex: NSRegularExpression
     private let specialsRegex: NSRegularExpression
+    
+    // 🔹 Prefix caches
+    var cachedPatterns: [String: [Int]] = [:]
 
     init?() {
         guard let enumData = GPTTokenizer.loadJSON(name: "enum_21869") as? [String: Int],
@@ -70,31 +73,26 @@ class GPTTokenizer {
 
         let specialsPattern = "([\(NSRegularExpression.escapedPattern(for: specials))])"
         self.specialsRegex = try! NSRegularExpression(pattern: specialsPattern, options: [])
+        
+        // 🔹 Load cached patterns (a, b, …, aa, ab, …, zz)
+        let fm = FileManager.default
+        if let resourceURL = Bundle.main.resourceURL {
+            if let files = try? fm.contentsOfDirectory(at: resourceURL, includingPropertiesForKeys: nil) {
+                for file in files where file.pathExtension == "json" {
+                    let key = file.deletingPathExtension().lastPathComponent.lowercased()
+                    // ✅ Only add if key length is 1 or 2
+                    if key.count == 1 || key.count == 2 {
+                        if let arr = GPTTokenizer.loadJSON(url: file) as? [Int] {
+                            cachedPatterns[key] = arr
+                        }
+                    }
+                }
+            }
+        }
+
         keyboardLogger.debug("Done init tokenizer")
     }
     
-    // MARK: - Preprocess (String -> String)
-//    private func preprocess(_ text: String) -> String {
-//        var clean = text.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-//        
-//        clean = allowRegex.stringByReplacingMatches(
-//            in: clean,
-//            options: [],
-//            range: NSRange(location: 0, length: clean.count),
-//            withTemplate: ""
-//        )
-//        
-//        clean = specialsRegex.stringByReplacingMatches(
-//            in: clean,
-//            options: [],
-//            range: NSRange(location: 0, length: clean.count),
-//            withTemplate: " $1 "
-//        )
-//        
-//        clean = clean.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
-//        return clean.trimmingCharacters(in: .whitespacesAndNewlines)
-//    }
-//    
     private func preprocess(_ text: String) -> String {
         var clean = text.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
 
@@ -157,6 +155,70 @@ class GPTTokenizer {
         return array
     }
 
+    private func isMatch(word: String, idx: Int, effectivePattern: String, toneMark: String) -> Bool {
+        // 🔹 Tone check
+        if !toneMark.isEmpty {
+            if idx < 1 || idx > 17788 { return false }
+            if renumToneMark[idx] != toneMark { return false }
+        }
+
+        // 🔹 Pattern check
+        if !effectivePattern.isEmpty {
+            let prefixChars = effectivePattern.map { normalizeChar($0) }
+            for (i, ch) in word.enumerated() {
+                if i >= prefixChars.count { break }
+                if normalizeChar(ch) != prefixChars[i] {
+                    return false
+                }
+            }
+        }
+
+        return true
+    }
+
+    func filter(pattern: String, predictions: [Int], toneMark: String) -> [String] {
+        var result: [String] = []
+        var effectivePattern = pattern
+
+        // 🔹 Adjust special consonants
+        if !toneMark.isEmpty, !pattern.isEmpty {
+            let firstChar = pattern.first!
+            let rest = String(pattern.dropFirst())
+            switch firstChar {
+            case "j": effectivePattern = "ch" + rest
+            case "z": effectivePattern = "gi" + rest
+            case "f": effectivePattern = "ph" + rest
+            default: break
+            }
+        }
+        effectivePattern = effectivePattern.lowercased()
+
+        // 🔹 Pre-check for punctuation leading prediction
+        if let first = predictions.first, first == 17818 || first == 17819 {
+            for modal in Constants.modalParticles {
+                if isMatch(word: modal, idx: -1, effectivePattern: effectivePattern, toneMark: toneMark) {
+                    result.append(modal)
+                    if result.count >= Constants.TOP_K { return result }
+                }
+            }
+        }
+
+        // 🔹 Normal prediction loop
+        var iterate = 0
+        for idx in predictions {
+            iterate += 1
+            if iterate > Constants.MAX_FILTER_ITERATE { break }
+            guard idx < renumList.count else { continue }
+            guard let word = renumList[idx] else { continue }
+            if isMatch(word: word, idx: idx, effectivePattern: effectivePattern, toneMark: toneMark) {
+                result.append(word)
+                if result.count >= Constants.TOP_K { break }
+            }
+        }
+
+        return result
+    }
+    
     func isSameInput(_ a: MLMultiArray?, _ b: MLMultiArray?) -> Bool {
         guard let a = a, let b = b else { return false }
         guard a.count == b.count else { return false }
@@ -168,61 +230,36 @@ class GPTTokenizer {
         }
         return true
     }
-
-
-//    func tokenize(text: String) -> MLMultiArray {
-//        let tokens = text.split(separator: " ").compactMap { enumDict[String($0)] }
-//        var padded = Array(tokens.suffix(Constants.MAX_SEQUENCE_LEN))
-//        if padded.count < Constants.MAX_SEQUENCE_LEN {
-//            let padCount = Constants.MAX_SEQUENCE_LEN - padded.count
-//            padded = Array(repeating: 0, count: padCount) + padded
-//        }
-//
-//        let array = try! MLMultiArray(shape: [NSNumber(value: Constants.MAX_SEQUENCE_LEN)], dataType: .int32)
-//        for i in 0..<Constants.MAX_SEQUENCE_LEN {
-//            array[i] = NSNumber(value: padded[i])
-//        }
-//        return array
-//    }
-
-    func filter(pattern: String, predictions: [Int], toneMark: String) -> [String] {
-        var result: [String] = []
-        
-        var iterate = 0
-        for idx in predictions {
-            iterate += 1
-            if iterate > Constants.MAX_FILTER_ITERATE { break }
-
-            guard idx < renumList.count else { continue }
-            guard let word = renumList[idx] else { continue }
-            
-            // 🔹 Tone check
-            if !toneMark.isEmpty {
-                if idx < 1 || idx > 17788 { continue }
-                if renumToneMark[idx] != toneMark { continue }
-            }
-            
-            // 🔹 Pattern check
-            if !pattern.isEmpty {
-                var asciiWord = word.applyingTransform(.toLatin, reverse: false)?
-                                        .applyingTransform(.stripDiacritics, reverse: false) ?? word
-                asciiWord = asciiWord.replacingOccurrences(of: "đ", with: "d")
-                                     .replacingOccurrences(of: "Đ", with: "D")
-                if !asciiWord.hasPrefix(pattern) { continue }
-            }
-            
-            result.append(word)
-            if result.count >= Constants.TOP_K { break }
-        }
-
-        return result
-    }
-
+    
     private static func loadJSON(name: String) -> Any? {
         guard let url = Bundle.main.url(forResource: name, withExtension: "json"),
               let data = try? Data(contentsOf: url) else {
             return nil
         }
         return try? JSONSerialization.jsonObject(with: data, options: [])
+    }
+    private static func loadJSON(url: URL) -> Any? {
+        guard let data = try? Data(contentsOf: url) else { return nil }
+        return try? JSONSerialization.jsonObject(with: data, options: [])
+    }
+    private func normalizeChar(_ char: Character) -> Character {
+        switch char {
+        case "đ":
+            return "d"
+        case "ă", "ắ", "ằ", "ẳ", "ẵ", "ặ", "â", "ấ", "ầ", "ẩ", "ẫ", "ậ", "á", "à", "ả", "ã", "ạ":
+            return "a"
+        case "ê", "ế", "ề", "ể", "ễ", "ệ", "é", "è", "ẻ", "ẽ", "ẹ":
+            return "e"
+        case "ô", "ố", "ồ", "ổ", "ỗ", "ộ", "ơ", "ớ", "ờ", "ở", "ỡ", "ợ", "ó", "ò", "ỏ", "õ", "ọ":
+            return "o"
+        case "ư", "ứ", "ừ", "ử", "ữ", "ự", "ú", "ù", "ủ", "ũ", "ụ":
+            return "u"
+        case "í", "ì", "ỉ", "ĩ", "ị":
+            return "i"
+        case "ý", "ỳ", "ỷ", "ỹ", "ỵ":
+            return "y"
+        default:
+            return char
+        }
     }
 }

@@ -23,10 +23,11 @@
 		89195C7D2E5F766400DEBD52 /* renum_21869.json in Resources */ = {isa = PBXBuildFile; fileRef = 89195C792E5F5F3600DEBD52 /* renum_21869.json */; };
 		89195C7E2E5F766C00DEBD52 /* renum_crt.json in Resources */ = {isa = PBXBuildFile; fileRef = 893DB00C2DCBD78B00747C34 /* renum_crt.json */; };
 		89195C802E61ABFC00DEBD52 /* Logger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89195C7F2E61ABF900DEBD52 /* Logger.swift */; };
-		89195C892E61DF9100DEBD52 /* v7gpt-2.1-large-20250827-fp16.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 89195C882E61DF9100DEBD52 /* v7gpt-2.1-large-20250827-fp16.mlpackage */; };
 		893DB0092DCBD26800747C34 /* V7GPTModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 893DB0082DCBD25C00747C34 /* V7GPTModel.swift */; };
 		893DB00D2DCBD78B00747C34 /* renum_crt.json in Resources */ = {isa = PBXBuildFile; fileRef = 893DB00C2DCBD78B00747C34 /* renum_crt.json */; };
 		8994578C2E08335C00B2DBEF /* V7GPTTokenizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8994578B2E08335300B2DBEF /* V7GPTTokenizer.swift */; };
+		89C928002E688FF500DE1B96 /* v7gpt-2.1-small-20250903-fp16.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 89C927FF2E688FF500DE1B96 /* v7gpt-2.1-small-20250903-fp16.mlpackage */; };
+		89E248CE2E6D486F00D66417 /* RadialMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89E248CD2E6D486700D66417 /* RadialMenu.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -70,10 +71,11 @@
 		89195C782E5F5F3600DEBD52 /* enum_21869.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = enum_21869.json; sourceTree = "<group>"; };
 		89195C792E5F5F3600DEBD52 /* renum_21869.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = renum_21869.json; sourceTree = "<group>"; };
 		89195C7F2E61ABF900DEBD52 /* Logger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logger.swift; sourceTree = "<group>"; };
-		89195C882E61DF9100DEBD52 /* v7gpt-2.1-large-20250827-fp16.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = "v7gpt-2.1-large-20250827-fp16.mlpackage"; sourceTree = "<group>"; };
 		893DB0082DCBD25C00747C34 /* V7GPTModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = V7GPTModel.swift; sourceTree = "<group>"; };
 		893DB00C2DCBD78B00747C34 /* renum_crt.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = renum_crt.json; sourceTree = "<group>"; };
 		8994578B2E08335300B2DBEF /* V7GPTTokenizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = V7GPTTokenizer.swift; sourceTree = "<group>"; };
+		89C927FF2E688FF500DE1B96 /* v7gpt-2.1-small-20250903-fp16.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = "v7gpt-2.1-small-20250903-fp16.mlpackage"; sourceTree = "<group>"; };
+		89E248CD2E6D486700D66417 /* RadialMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadialMenu.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -128,13 +130,14 @@
 		38BD214D22D592CA00C6795D /* v7KeyboardExtension */ = {
 			isa = PBXGroup;
 			children = (
-				89195C882E61DF9100DEBD52 /* v7gpt-2.1-large-20250827-fp16.mlpackage */,
+				89C927FF2E688FF500DE1B96 /* v7gpt-2.1-small-20250903-fp16.mlpackage */,
 				89195C782E5F5F3600DEBD52 /* enum_21869.json */,
 				89195C792E5F5F3600DEBD52 /* renum_21869.json */,
 				893DB00C2DCBD78B00747C34 /* renum_crt.json */,
 				893DB0082DCBD25C00747C34 /* V7GPTModel.swift */,
 				8994578B2E08335300B2DBEF /* V7GPTTokenizer.swift */,
 				38BD214E22D592CA00C6795D /* KeyboardViewController.swift */,
+				89E248CD2E6D486700D66417 /* RadialMenu.swift */,
 				89195C7F2E61ABF900DEBD52 /* Logger.swift */,
 				38BD215022D592CA00C6795D /* Info.plist */,
 				38BD215822D5935A00C6795D /* Keyboard.xib */,
@@ -261,10 +264,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				89195C892E61DF9100DEBD52 /* v7gpt-2.1-large-20250827-fp16.mlpackage in Sources */,
 				38BD214F22D592CA00C6795D /* KeyboardViewController.swift in Sources */,
+				89C928002E688FF500DE1B96 /* v7gpt-2.1-small-20250903-fp16.mlpackage in Sources */,
 				893DB0092DCBD26800747C34 /* V7GPTModel.swift in Sources */,
 				38BD215B22D5A26900C6795D /* Constants.swift in Sources */,
+				89E248CE2E6D486F00D66417 /* RadialMenu.swift in Sources */,
 				8994578C2E08335C00B2DBEF /* V7GPTTokenizer.swift in Sources */,
 				38DD94F122D6A40000FF8845 /* Extensions.swift in Sources */,
 				89195C802E61ABFC00DEBD52 /* Logger.swift in Sources */,
