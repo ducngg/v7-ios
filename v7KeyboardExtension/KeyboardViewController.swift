@@ -8,17 +8,6 @@
 import UIKit
 import CoreML
 
-func model_predict(model: v7gpt_2_1_small_20250903_fp16, input: MLMultiArray) -> [Int]? {
-    do {
-        let output = try model.prediction(input_token_ids: input)
-        return output.ranked_desc_token_idsShapedArray.scalars.map { Int($0) }
-    } catch {
-        keyboardLogger.error("Prediction error: \(error.localizedDescription)")
-        return nil
-    }
-}
-
-
 extension UILabel {
     func padding(left: CGFloat, right: CGFloat, top: CGFloat, bottom: CGFloat) {
         let insets = UIEdgeInsets(top: top, left: left, bottom: bottom, right: right)
@@ -37,31 +26,33 @@ class KeyboardViewController: UIInputViewController {
 	var backspaceTimer: Timer?
     
     let gptTokenizer = GPTTokenizer()
+    var biasVectorManager: BiasVectorManager?
 
-    // Lazily load Core ML model to avoid memory issues at startup
-    lazy var model: v7gpt_2_1_small_20250903_fp16? = {
-        let config = MLModelConfiguration()
-//        config.computeUnits = .cpuAndNeuralEngine   // avoids GPU memory overhead
-//        config.computeUnits = .cpuOnly
-//        config.computeUnits = .cpuAndGPU
-//        config.allowLowPrecisionAccumulationOnGPU = true
-        
-        do {
-            return try v7gpt_2_1_small_20250903_fp16(configuration: config)
-        } catch {
-            keyboardLogger.error("⚠️ Failed to load model: \(error.localizedDescription)")
-            return nil
+    var model: v7gpt_2_2_small_20250909_with_bias?
+    private func loadModel() {
+        autoreleasepool {
+            let config = MLModelConfiguration()
+            //        config.computeUnits = .cpuAndNeuralEngine   // avoids GPU memory overhead
+            //        config.computeUnits = .cpuOnly
+            //        config.computeUnits = .cpuAndGPU
+            config.computeUnits = .cpuOnly   // ✅ safest for extensions
+            do {
+                let t0 = Date()
+                model = try v7gpt_2_2_small_20250909_with_bias(configuration: config)
+                keyboardLogger.debug("✅ Model loaded in \(Date().timeIntervalSince(t0))s")
+            } catch {
+                keyboardLogger.error("⚠️ Failed to load model: \(error.localizedDescription)")
+            }
         }
-    }()
+    }
     
     let defaultContext: String = "bây giờ"
     var lastRawContextWithoutPattern: String?
     var lastInputArray: MLMultiArray?
-    
     var toneInfoLabel: UILabel?
     var currentTone: String = "" {
         didSet {
-            toneInfoLabel?.text = currentTone.isEmpty ? "–" : currentTone
+            toneInfoLabel?.text = currentTone.isEmpty ? Constants.defaultToneDisplay : currentTone
         }
     }
     func resetCurrentTone() {
@@ -86,7 +77,7 @@ class KeyboardViewController: UIInputViewController {
 	var keyboardState: KeyboardState = .letters
 	var shiftButtonState:ShiftButtonState = .normal
     var hasEnteredRadialMenu = false
-
+    private var panStartPoint: CGPoint?   // Store where the gesture began
 	
 	@IBOutlet weak var stackView1: UIStackView!
 	@IBOutlet weak var stackView2: UIStackView!
@@ -107,7 +98,11 @@ class KeyboardViewController: UIInputViewController {
 
         setupSuggestionBar()
         loadInterface()
+        loadModel()
         
+        let cached = CacheManager.loadCache()
+        biasVectorManager = BiasVectorManager(initialVector: cached)
+
         updatePattern()
         predict()
     }
@@ -140,24 +135,42 @@ class KeyboardViewController: UIInputViewController {
 //        self.nextKeyboardButton.isHidden = !self.needsInputModeSwitchKey
 //    }
 
-    
     func setupSuggestionBar() {
         if suggestionBar != nil { return }
 
         let container = UIStackView()
         container.axis = .horizontal
         container.translatesAutoresizingMaskIntoConstraints = false
-        container.backgroundColor = Constants.backgroundColor
+        container.backgroundColor = .clear
         view.addSubview(container)
+
+        // 🔹 Blur background (same as keyboardView)
+        let blurEffect: UIBlurEffect
+        if traitCollection.userInterfaceStyle == .dark {
+            blurEffect = UIBlurEffect(style: .systemThinMaterialDark)
+        } else {
+            blurEffect = UIBlurEffect(style: .systemThinMaterialLight)
+        }
+
+        let blurView = UIVisualEffectView(effect: blurEffect)
+        blurView.translatesAutoresizingMaskIntoConstraints = false
+        container.insertSubview(blurView, at: 0) // background
+
+        NSLayoutConstraint.activate([
+            blurView.topAnchor.constraint(equalTo: container.topAnchor),
+            blurView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            blurView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            blurView.bottomAnchor.constraint(equalTo: container.bottomAnchor)
+        ])
 
         // 🔹 Fixed info label
         let infoLabel = UILabel()
-        infoLabel.text = "–"   // Default when no tone selected
+        infoLabel.text = Constants.defaultToneDisplay
         infoLabel.textAlignment = .center
         infoLabel.font = UIFont.systemFont(ofSize: 16, weight: .medium)
         infoLabel.widthAnchor.constraint(equalToConstant: 40).isActive = true
         infoLabel.textColor = Constants.textColor
-        infoLabel.backgroundColor = Constants.backgroundColor
+        infoLabel.backgroundColor = .clear
         container.addArrangedSubview(infoLabel)
         self.toneInfoLabel = infoLabel
 
@@ -165,7 +178,7 @@ class KeyboardViewController: UIInputViewController {
         let scrollView = UIScrollView()
         scrollView.showsHorizontalScrollIndicator = false
         scrollView.translatesAutoresizingMaskIntoConstraints = false
-        scrollView.backgroundColor = Constants.backgroundColor
+        scrollView.backgroundColor = .clear
         container.addArrangedSubview(scrollView)
 
         // 🔹 Stack view inside scroll view
@@ -188,7 +201,6 @@ class KeyboardViewController: UIInputViewController {
             container.heightAnchor.constraint(equalToConstant: 40),
 
             scrollView.heightAnchor.constraint(equalTo: container.heightAnchor),
-//            scrollView.heightAnchor.constraint(equalToConstant: 50),
 
             bar.topAnchor.constraint(equalTo: scrollView.topAnchor),
             bar.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
@@ -197,6 +209,7 @@ class KeyboardViewController: UIInputViewController {
             bar.heightAnchor.constraint(equalTo: scrollView.heightAnchor)
         ])
     }
+
 
     func updateSuggestions() {
         // Clear previous buttons
@@ -258,6 +271,28 @@ class KeyboardViewController: UIInputViewController {
         if !fromRadialMenu {
             resetCurrentTone()
         }
+        
+        // 🔸 Update cache
+        guard let tokenizer = self.gptTokenizer else {
+            keyboardLogger.debug("❌ gptTokenizer is nil")
+            return
+        }
+        guard let biasVectorManager = self.biasVectorManager else {
+            keyboardLogger.debug("❌ biasVectorManager is nil")
+            return
+        }
+        if let index = tokenizer.enumDict[word.lowercased()] {
+            // Update bias vector
+            biasVectorManager.updateBiasVector(at: index)
+
+            // Save updated vector to cache
+            CacheManager.saveCache(biasVectorManager.biasVector)
+
+            keyboardLogger.debug("✅ Updated bias for '\(word)' at index \(index)")
+        } else {
+            keyboardLogger.debug("⚠️ Token not found for '\(word)'")
+        }
+
     }
     func emitTopPrediction() {
         guard let firstButton = suggestionBar?.arrangedSubviews.first as? UIButton else { return }
@@ -309,6 +344,10 @@ class KeyboardViewController: UIInputViewController {
             keyboardLogger.debug("❌ gptTokenizer is nil")
             return
         }
+        guard let biasVectorManager = self.biasVectorManager else {
+            keyboardLogger.debug("❌ biasVectorManager is nil")
+            return
+        }
         
         var inputArray = tokenizer.tokenize(text: rawContextWithoutPattern)
 
@@ -331,7 +370,13 @@ class KeyboardViewController: UIInputViewController {
 
             let start = DispatchTime.now()
 
-            if let predictions = model_predict(model: model, input: inputArray) {
+            if let predictions = model_predict(
+                model: model,
+                input: inputArray,
+                biasVector: biasVectorManager.biasVector,
+                alpha: Constants.BIAS_ALPHA,
+                temperature: Constants.TEMPERATURE,
+            ) {
                 let end = DispatchTime.now()
                 let nanoTime = end.uptimeNanoseconds - start.uptimeNanoseconds
                 let timeInMs = Double(nanoTime) / 1_000_000.0
@@ -352,26 +397,35 @@ class KeyboardViewController: UIInputViewController {
     var radialKeyButton: UIButton?
 
     @objc func handleKeyPan(_ gesture: UIPanGestureRecognizer) {
-        guard let keyButton = gesture.view as? UIButton,
-              let keyChar = keyButton.accessibilityLabel,
-              let parentView = view else { return }
+            guard let keyButton = gesture.view as? UIButton,
+                  let keyChar = keyButton.accessibilityLabel,
+                  let parentView = view else { return }
 
-        radialKeyButton = keyButton
-        let keyFrameInView = keyButton.superview?.convert(keyButton.frame, to: parentView) ?? .zero
+            let keyFrameInView = keyButton.superview?.convert(keyButton.frame, to: parentView) ?? .zero
 
-        switch gesture.state {
-        case .began:
-            showRadialMenu(
-                at: CGPoint(
-                    x: keyFrameInView.midX,
-                    y: keyFrameInView.midY
-                ),
-                for: keyChar
-            )
+            switch gesture.state {
+            case .began:
+                radialKeyButton = keyButton
+                panStartPoint = gesture.location(in: parentView)
 
-        case .changed:
-            let touchInRadial = gesture.location(in: radialMenu)
-            radialMenu?.updateSelection(from: touchInRadial)
+            case .changed:
+                guard let start = panStartPoint else { return }
+                let current = gesture.location(in: parentView)
+                let distance = hypot(current.x - start.x, current.y - start.y)
+
+                if radialMenu == nil, distance > Constants.activationThreshold {
+                    // Show menu only if moved enough
+                    showRadialMenu(
+                        at: CGPoint(x: keyFrameInView.midX, y: keyFrameInView.midY),
+                        for: keyChar
+                    )
+                }
+
+                // If menu is already showing, update selection
+                if let radialMenu = radialMenu {
+                    let touchInRadial = gesture.location(in: radialMenu)
+                    radialMenu.updateSelection(from: touchInRadial)
+                }
 
         case .ended, .cancelled:
             var term = keyChar
@@ -462,8 +516,6 @@ class KeyboardViewController: UIInputViewController {
     }
 
 	
-    //
-	
 //	func loadInterface(){
 //		let keyboardNib = UINib(nibName: "Keyboard", bundle: nil)
 //		keyboardView = keyboardNib.instantiate(withOwner: self, options: nil)[0] as? UIView
@@ -486,8 +538,8 @@ class KeyboardViewController: UIInputViewController {
         ])
             
         // 🔹 Set background based on system appearance
-        keyboardView.backgroundColor = Constants.backgroundColor
-    
+        keyboardView.backgroundColor = .clear // Constants.backgroundColor
+
         loadKeys()
     }
 	
@@ -655,6 +707,20 @@ class KeyboardViewController: UIInputViewController {
         // More logic here
         deleteBackwardAndTriggerChange()
     }
+    func handleEmojiButton() {
+        for mode in UITextInputMode.activeInputModes {
+            if mode.primaryLanguage == "emoji" {
+                // Switch to emoji keyboard
+//                self.advanceToNextInputMode()
+                currentTone = "☻"
+                return
+            }
+        }
+        currentTone = "⛫"
+        // If no emoji mode found, just cycle input modes
+//        self.advanceToNextInputMode()
+    }
+
 	
 	@IBAction func keyPressedTouchUp(_ sender: UIButton) {
 		guard let originalKey = sender.layer.value(forKey: "original") as? String, let keyToDisplay = sender.layer.value(forKey: "keyToDisplay") as? String else {return}
@@ -687,6 +753,9 @@ class KeyboardViewController: UIInputViewController {
                 shiftButtonState = shiftButtonState == .normal ? .shift : .normal
                 loadKeys()
                 updateSuggestions()
+            case "☻": // 🔹 or whatever label you use
+                handleEmojiButton()
+
             default:
                 if shiftButtonState == .shift {
                     shiftButtonState = .normal

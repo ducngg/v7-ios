@@ -10,7 +10,7 @@ import Foundation
 import CoreML
 
 class GPTTokenizer {
-    private let enumDict: [String: Int]
+    let enumDict: [String: Int]
     private let renumList: [String?]
     private let renumCrtList: [[Any]?]
     private let toneMarks = [
@@ -193,15 +193,15 @@ class GPTTokenizer {
         }
         effectivePattern = effectivePattern.lowercased()
 
-        // 🔹 Pre-check for punctuation leading prediction
-        if let first = predictions.first, first == 17818 || first == 17819 {
-            for modal in Constants.modalParticles {
-                if isMatch(word: modal, idx: -1, effectivePattern: effectivePattern, toneMark: toneMark) {
-                    result.append(modal)
-                    if result.count >= Constants.TOP_K { return result }
-                }
-            }
-        }
+//        // 🔹 Pre-check for punctuation leading prediction
+//        if let first = predictions.first, first == 17818 || first == 17819 {
+//            for modal in Constants.modalParticles {
+//                if isMatch(word: modal, idx: -1, effectivePattern: effectivePattern, toneMark: toneMark) {
+//                    result.append(modal)
+//                    if result.count >= Constants.TOP_K { return result }
+//                }
+//            }
+//        }
 
         // 🔹 Normal prediction loop
         var iterate = 0

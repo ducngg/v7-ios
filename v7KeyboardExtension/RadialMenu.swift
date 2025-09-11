@@ -32,7 +32,7 @@ class RadialMenuView: UIView {
 
         let font = UIFont.systemFont(ofSize: 16, weight: .medium)
         let textAttributes: [NSAttributedString.Key: Any] = [
-            .foregroundColor: UIColor.black,
+            .foregroundColor: Constants.textColor,
             .font: font
         ]
 
