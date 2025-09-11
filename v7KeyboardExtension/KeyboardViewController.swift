@@ -17,7 +17,7 @@ extension UILabel {
 
 var proxy : UITextDocumentProxy!
 
-class KeyboardViewController: UIInputViewController {
+class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
 		
     var suggestionBar: UIStackView?
 	var keyboardView: UIView!
@@ -60,6 +60,7 @@ class KeyboardViewController: UIInputViewController {
     }
 
     var currentPrediction: [Int] = []
+    var currentExtraSuggestion: Int = 0
     var pattern: String = ""
 
 	enum KeyboardState{
@@ -79,6 +80,7 @@ class KeyboardViewController: UIInputViewController {
     var hasEnteredRadialMenu = false
     private var panStartPoint: CGPoint?   // Store where the gesture began
 	
+    var suggestionScrollView: UIScrollView?
 	@IBOutlet weak var stackView1: UIStackView!
 	@IBOutlet weak var stackView2: UIStackView!
 	@IBOutlet weak var stackView3: UIStackView!
@@ -179,7 +181,9 @@ class KeyboardViewController: UIInputViewController {
         scrollView.showsHorizontalScrollIndicator = false
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         scrollView.backgroundColor = .clear
+        scrollView.delegate = self
         container.addArrangedSubview(scrollView)
+        self.suggestionScrollView = scrollView
 
         // 🔹 Stack view inside scroll view
         let bar = UIStackView()
@@ -209,6 +213,23 @@ class KeyboardViewController: UIInputViewController {
             bar.heightAnchor.constraint(equalTo: scrollView.heightAnchor)
         ])
     }
+    @objc func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        // check if user scrolled near the right edge
+        let offsetX = scrollView.contentOffset.x
+        let maxOffsetX = scrollView.contentSize.width - scrollView.bounds.width
+        
+        // tolerance (to avoid pixel rounding issues)
+        if offsetX >= maxOffsetX - 10 {
+            loadMoreSuggestions()
+        }
+    }
+    private func loadMoreSuggestions() {
+        guard currentExtraSuggestion < Constants.EXTRA_SUGGESTION_MAX else { return }
+
+        currentExtraSuggestion += Constants.EXTRA_SUGGESTION_STEP
+        updateSuggestions()
+        
+    }
 
 
     func updateSuggestions() {
@@ -221,12 +242,13 @@ class KeyboardViewController: UIInputViewController {
         let filtered = tokenizer.filter(
             pattern: pattern,
             predictions: currentPrediction,
-            toneMark: currentTone
+            toneMark: currentTone,
+            extraSuggestion: currentExtraSuggestion,
         )
 //        let filtered = ["Hello", pattern]
 
         // 🟦 Show only top-k suggestions
-        for word in filtered.prefix(Constants.TOP_K_SHOWING) {
+        for word in filtered {
             
             var adjusted = word
             if shiftButtonState == .caps {
@@ -270,6 +292,11 @@ class KeyboardViewController: UIInputViewController {
         // 🔸 Reset tone unless it comes from radial menu
         if !fromRadialMenu {
             resetCurrentTone()
+        }
+        
+        if shiftButtonState != .caps {
+            shiftButtonState = .normal
+            loadKeys()
         }
         
         // 🔸 Update cache
@@ -413,7 +440,7 @@ class KeyboardViewController: UIInputViewController {
                 let current = gesture.location(in: parentView)
                 let distance = hypot(current.x - start.x, current.y - start.y)
 
-                if radialMenu == nil, distance > Constants.activationThreshold {
+                if radialMenu == nil, distance > Constants.RADIAL_MENU_MOVEMENT_MIN_THRESHOLD_TO_SHOW {
                     // Show menu only if moved enough
                     showRadialMenu(
                         at: CGPoint(x: keyFrameInView.midX, y: keyFrameInView.midY),
@@ -590,8 +617,12 @@ class KeyboardViewController: UIInputViewController {
             
 		case .numbers:
 			keyboard = Constants.numberKeys
-		case .symbols: 
+            
+            addPadding(to: stackView4, width: buttonWidth/2, key: "")
+		case .symbols:
 			keyboard = Constants.symbolKeys
+            
+            addPadding(to: stackView4, width: buttonWidth/2, key: "")
 		}
 		
 		let numRows = keyboard.count
@@ -611,6 +642,7 @@ class KeyboardViewController: UIInputViewController {
 
 				let capsKey = keyboard[row][col].capitalized
 				let keyToDisplay = shiftButtonState == .normal ? key : capsKey
+                
 				button.layer.setValue(key, forKey: "original")
 				button.layer.setValue(keyToDisplay, forKey: "keyToDisplay")
 				button.layer.setValue(false, forKey: "isSpecial")
@@ -657,7 +689,7 @@ class KeyboardViewController: UIInputViewController {
 							button.backgroundColor = Constants.keyPressedColour
 						}
 						if shiftButtonState == .caps{
-							button.setTitle("⏫", for: .normal)
+							button.setTitle("⇪", for: .normal)
 						}
 					}
 				}else if (keyboardState == .numbers || keyboardState == .symbols) && row == 2{
@@ -684,8 +716,13 @@ class KeyboardViewController: UIInputViewController {
                 addPadding(to: stackView4, width: buttonWidth/2, key: "")
 
             case .numbers:
+            
+                addPadding(to: stackView4, width: buttonWidth/2, key: "")
                 break
-            case .symbols: break
+            case .symbols:
+        
+                addPadding(to: stackView4, width: buttonWidth/2, key: "")
+                break
 		}
 		
 	}
@@ -814,6 +851,7 @@ class KeyboardViewController: UIInputViewController {
 	
 	override func textDidChange(_ textInput: UITextInput?) {
 		// The app has just changed the document's contents, the document context has been updated.
+        currentExtraSuggestion = 0
         self.updatePattern()
         self.predict()
     }

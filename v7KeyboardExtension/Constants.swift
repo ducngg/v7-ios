@@ -12,15 +12,16 @@ enum Constants{
     static let MAX_SEQUENCE_LEN = 32
     static let VOCAB_SIZE = 21869
     static let MODEL = "v7gpt-2.1-small-20250903-fp16"
-    static let TOP_K = 128
-    static let TOP_K_SHOWING = 24
-    static let MAX_FILTER_ITERATE = 4096
+    static let TOP_K = 16
+    static let MAX_FILTER_ITERATE = 16384
+    static let EXTRA_SUGGESTION_STEP: Int = 16
+    static let EXTRA_SUGGESTION_MAX: Int = 64
     
     static let TEMPERATURE: Float = 1.0
     static let BIAS_ALPHA: Float = 0.3
     static let BIAS_INCREMENT_STEP: Float = 50 / Float(VOCAB_SIZE)
     
-    static let activationThreshold: CGFloat = 5.0
+    static let RADIAL_MENU_MOVEMENT_MIN_THRESHOLD_TO_SHOW: CGFloat = 5.0
 
     static let fakeClear: UIColor = UIColor(white: 0.1, alpha: 0.01) // If using clear then very hard to press button
     static let textColor: UIColor = {
@@ -65,18 +66,18 @@ enum Constants{
 	]
 	static let numberKeys = [
 		["1", "2", "3", "4", "5", "6", "7", "8", "9", "0",],
-		["-", "/", ":", ";", "(", ")" ,",", "$", "&", "@", "\""],
+		["-", "/", ":", ";", "(", ")" , "$", "&", "@", "\""],
 		["#+=",".", ",", "?", "!", "\'", "⌫"],
 		["ABC", "☻", "dấu cách", "⏎"]
 	]
 	
 	static let symbolKeys = [
 		["[", "]", "{", "}", "#", "%", "^", "*", "+", "="],
-		["_", "\\", "|", "~", "<", ">", "€", "£", "¥", "·"],
-		["123",".", ",", "?", "!", "\'", "⌫"],
+		["_", "\\", "|", "~", "<", ">", "€", "£", "¥", "đ"],
+		["123","·", ",", "?", "!", "\'", "⌫"],
 		["ABC", "☻", "dấu cách", "⏎"]
 	]
-    static let specialKeys = ["⇧", "⌫", "#+=", "ABC", "123", "☻", "⏎"]
+    static let specialKeys = ["⇧", "⌫", "#+=", "☻", "⏎"]
     
     static let modalParticles = [
         "nhé", "nha", "nhe", "nhá",

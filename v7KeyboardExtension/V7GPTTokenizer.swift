@@ -176,7 +176,12 @@ class GPTTokenizer {
         return true
     }
 
-    func filter(pattern: String, predictions: [Int], toneMark: String) -> [String] {
+    func filter(
+        pattern: String,
+        predictions: [Int],
+        toneMark: String,
+        extraSuggestion: Int
+    ) -> [String] {
         var result: [String] = []
         var effectivePattern = pattern
 
@@ -212,7 +217,7 @@ class GPTTokenizer {
             guard let word = renumList[idx] else { continue }
             if isMatch(word: word, idx: idx, effectivePattern: effectivePattern, toneMark: toneMark) {
                 result.append(word)
-                if result.count >= Constants.TOP_K { break }
+                if result.count >= Constants.TOP_K + extraSuggestion { break }
             }
         }
 
