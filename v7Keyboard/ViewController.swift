@@ -32,6 +32,7 @@ class ViewController: UIViewController {
 		
 		- Add CustomKeyboard-Start typing in any app- Press - to switch to the CustomKeyboard keyboard- Tap this text to start typing!
 		"""
+        instructions.textColor = .black
 	}
 
 

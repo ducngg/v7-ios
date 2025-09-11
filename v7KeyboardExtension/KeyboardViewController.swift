@@ -538,7 +538,7 @@ class KeyboardViewController: UIInputViewController {
         ])
             
         // 🔹 Set background based on system appearance
-        keyboardView.backgroundColor = .clear // Constants.backgroundColor
+        keyboardView.backgroundColor = Constants.backgroundColor
 
         loadKeys()
     }

@@ -32,9 +32,9 @@ enum Constants{
     }()
     static let backgroundColor: UIColor = {
         if UITraitCollection.current.userInterfaceStyle == .dark {
-            return UIColor.darkGray
+            return fakeClear
         } else {
-            return UIColor(white: 0.95, alpha: 1.0)
+            return UIColor(white: 0.95, alpha: 0.35)
         }
     }()
 
@@ -47,8 +47,14 @@ enum Constants{
     
     // Radial Menu Colors
     static let radialMenuSelected: CGColor = UIColor.systemBlue.withAlphaComponent(0.95).cgColor
-    static let radialMenuUnselected: CGColor = backgroundColor.cgColor
-    static let defaultToneDisplay: String = "ᯅ" // "⛫"
+    static let radialMenuUnselected: CGColor = {
+        if UITraitCollection.current.userInterfaceStyle == .dark {
+            return UIColor(white: 0.2, alpha: 0.9).cgColor
+        } else {
+            return UIColor(white: 0.95, alpha: 0.9).cgColor
+        }
+    }()
+    static let defaultToneDisplay: String = "ᯅ"
 
     
 	static let letterKeys = [
