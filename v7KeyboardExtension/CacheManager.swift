@@ -9,16 +9,12 @@
 import Foundation
 
 struct CacheManager {
-    static let appGroupID = "group.com.test.v7keyboard"
     static let cacheFileName = "keyboardCache.json"
 
+    /// URL in Library/Caches (per-app sandbox)
     private static var cacheFileURL: URL? {
-        guard let containerURL = FileManager.default.containerURL(
-            forSecurityApplicationGroupIdentifier: appGroupID
-        ) else {
-            return nil
-        }
-        return containerURL.appendingPathComponent(cacheFileName)
+        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first?
+            .appendingPathComponent(cacheFileName)
     }
 
     static func saveCache(_ values: [Float]) {
@@ -43,6 +39,11 @@ struct CacheManager {
             print("⚠️ Failed to decode cache:", error)
             return nil
         }
+    }
+
+    static func clearCache() {
+        guard let url = cacheFileURL else { return }
+        try? FileManager.default.removeItem(at: url)
     }
 }
 

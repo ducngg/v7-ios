@@ -155,7 +155,12 @@ class GPTTokenizer {
         return array
     }
 
-    private func isMatch(word: String, idx: Int, effectivePattern: String, toneMark: String) -> Bool {
+    private func isMatch(
+        word: String,
+        idx: Int,
+        effectivePattern: String,
+        toneMark: String
+    ) -> Bool {
         // 🔹 Tone check
         if !toneMark.isEmpty {
             if idx < 1 || idx > 17788 { return false }
@@ -184,7 +189,11 @@ class GPTTokenizer {
     ) -> [String] {
         var result: [String] = []
         var effectivePattern = pattern
-
+        
+        if pattern.count > 6 {
+            return result
+        }
+        
         // 🔹 Adjust special consonants
         if !toneMark.isEmpty, !pattern.isEmpty {
             let firstChar = pattern.first!
@@ -210,9 +219,10 @@ class GPTTokenizer {
 
         // 🔹 Normal prediction loop
         var iterate = 0
+        let max_iterate = !toneMark.isEmpty ? Constants.MAX_FILTER_ITERATE_VIET : Constants.MAX_FILTER_ITERATE
         for idx in predictions {
             iterate += 1
-            if iterate > Constants.MAX_FILTER_ITERATE { break }
+            if iterate > max_iterate { break }
             guard idx < renumList.count else { continue }
             guard let word = renumList[idx] else { continue }
             if isMatch(word: word, idx: idx, effectivePattern: effectivePattern, toneMark: toneMark) {

@@ -46,7 +46,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         }
     }
     
-    let defaultContext: String = "bây giờ"
+    let defaultContext: String = Constants.DEFAULT_CONTEXT
     var lastRawContextWithoutPattern: String?
     var lastInputArray: MLMultiArray?
     var toneInfoLabel: UILabel?
@@ -147,23 +147,23 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         view.addSubview(container)
 
         // 🔹 Blur background (same as keyboardView)
-        let blurEffect: UIBlurEffect
-        if traitCollection.userInterfaceStyle == .dark {
-            blurEffect = UIBlurEffect(style: .systemThinMaterialDark)
-        } else {
-            blurEffect = UIBlurEffect(style: .systemThinMaterialLight)
-        }
+//        let blurEffect: UIBlurEffect
+//        if traitCollection.userInterfaceStyle == .dark {
+//            blurEffect = UIBlurEffect(style: .systemThinMaterialDark)
+//        } else {
+//            blurEffect = UIBlurEffect(style: .systemThinMaterialLight)
+//        }
+//
+//        let blurView = UIVisualEffectView(effect: blurEffect)
+//        blurView.translatesAutoresizingMaskIntoConstraints = false
+//        container.insertSubview(blurView, at: 0) // background
 
-        let blurView = UIVisualEffectView(effect: blurEffect)
-        blurView.translatesAutoresizingMaskIntoConstraints = false
-        container.insertSubview(blurView, at: 0) // background
-
-        NSLayoutConstraint.activate([
-            blurView.topAnchor.constraint(equalTo: container.topAnchor),
-            blurView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-            blurView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            blurView.bottomAnchor.constraint(equalTo: container.bottomAnchor)
-        ])
+//        NSLayoutConstraint.activate([
+//            blurView.topAnchor.constraint(equalTo: container.topAnchor),
+//            blurView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+//            blurView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+//            blurView.bottomAnchor.constraint(equalTo: container.bottomAnchor)
+//        ])
 
         // 🔹 Fixed info label
         let infoLabel = UILabel()
@@ -172,7 +172,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         infoLabel.font = UIFont.systemFont(ofSize: 16, weight: .medium)
         infoLabel.widthAnchor.constraint(equalToConstant: 40).isActive = true
         infoLabel.textColor = Constants.textColor
-        infoLabel.backgroundColor = .clear
+        infoLabel.backgroundColor = Constants.backgroundColor
         container.addArrangedSubview(infoLabel)
         self.toneInfoLabel = infoLabel
 
@@ -180,7 +180,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         let scrollView = UIScrollView()
         scrollView.showsHorizontalScrollIndicator = false
         scrollView.translatesAutoresizingMaskIntoConstraints = false
-        scrollView.backgroundColor = .clear
+        scrollView.backgroundColor = Constants.backgroundColor
         scrollView.delegate = self
         container.addArrangedSubview(scrollView)
         self.suggestionScrollView = scrollView
@@ -511,7 +511,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
     func showRadialMenu(at center: CGPoint, for key: String) {
         if radialMenu == nil {
             if key == "dấu cách" { // spacebar
-                radialMenu = RadialMenuView(frame: CGRect(x: 0, y: 0, width: 120, height: 120),
+                radialMenu = RadialMenuView(frame: CGRect(x: 0, y: 0, width: 80, height: 80),
                                             items: [".", ","])
             } else {
                 radialMenu = RadialMenuView(frame: CGRect(x: 0, y: 0, width: 120, height: 120),
@@ -558,7 +558,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         view.addSubview(keyboardView)
 
         NSLayoutConstraint.activate([
-            keyboardView.topAnchor.constraint(equalTo: suggestionBar?.bottomAnchor ?? view.topAnchor, constant: 4),
+            keyboardView.topAnchor.constraint(equalTo: suggestionBar?.bottomAnchor ?? view.topAnchor),
             keyboardView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             keyboardView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             keyboardView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
@@ -779,7 +779,14 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
                 resetCurrentTone()
 
             case "⏎":
+//                if !pattern.isEmpty { // Maybe not so convenient
+//                    emitTopPrediction()
+//                } else {
+//                    insertTextAndTriggerChange("\n")
+//                }
                 insertTextAndTriggerChange("\n")
+
+
             case "123":
                 changeKeyboardToNumberKeys()
             case "ABC":

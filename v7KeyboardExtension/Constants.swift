@@ -12,8 +12,11 @@ enum Constants{
     static let MAX_SEQUENCE_LEN = 32
     static let VOCAB_SIZE = 21869
     static let MODEL = "v7gpt-2.1-small-20250903-fp16"
+    static let DEFAULT_CONTEXT = "bây giờ"
     static let TOP_K = 16
-    static let MAX_FILTER_ITERATE = 16384
+    static let MAX_FILTER_ITERATE = 2048
+    static let MAX_FILTER_ITERATE_VIET = 16384 // For rare words to be findable
+    
     static let EXTRA_SUGGESTION_STEP: Int = 16
     static let EXTRA_SUGGESTION_MAX: Int = 64
     
@@ -35,7 +38,7 @@ enum Constants{
         if UITraitCollection.current.userInterfaceStyle == .dark {
             return fakeClear
         } else {
-            return UIColor(white: 0.95, alpha: 0.35)
+            return UIColor(white: 1, alpha: 0.25)
         }
     }()
 
@@ -50,12 +53,22 @@ enum Constants{
     static let radialMenuSelected: CGColor = UIColor.systemBlue.withAlphaComponent(0.95).cgColor
     static let radialMenuUnselected: CGColor = {
         if UITraitCollection.current.userInterfaceStyle == .dark {
-            return UIColor(white: 0.2, alpha: 0.9).cgColor
+            return UIColor(white: 0.1, alpha: 0.94).cgColor
         } else {
-            return UIColor(white: 0.95, alpha: 0.9).cgColor
+            return UIColor(white: 0.95, alpha: 0.94).cgColor
         }
     }()
-    static let defaultToneDisplay: String = "ᯅ"
+    
+//    static let defaultToneDisplay: String = "♥︎" // for love
+    static let defaultToneDisplay: String = "ᯅ" // Apple vision
+//    static let defaultToneDisplay: String = {
+//        if UITraitCollection.current.userInterfaceStyle == .dark {
+//            return "D"
+//        } else {
+//            return "L"
+//        }
+//    }()
+
 
     
 	static let letterKeys = [
