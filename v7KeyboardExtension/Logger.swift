@@ -3,7 +3,6 @@
 //  v7Keyboard
 //
 //  Created by Duc on 29/08/2025.
-//  Copyright © 2025 Duc. All rights reserved.
 //
 
 import os

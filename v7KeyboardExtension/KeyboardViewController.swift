@@ -3,6 +3,7 @@
 //
 //  Created by Ethan Sarif-Kattan on 09/07/2019.
 //  Copyright © 2019 Ethan Sarif-Kattan. All rights reserved.
+//  Extended by Duc
 //
 
 import UIKit
@@ -455,7 +456,8 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
                 }
 
         case .ended, .cancelled:
-            var term = keyChar
+            let term = shiftButtonState == .normal ? keyChar : keyChar.uppercased()
+                
             if let selectedItem = radialMenu?.selectedItem {
                 if selectedItem == "." || selectedItem == "," {
                     // 🔹 Special handling for punctuation
@@ -471,7 +473,6 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
                     resetCurrentTone()
                 } else {
                     // 🔹 Normal tone-mark behavior
-                    term = "\(keyChar)"
                     currentTone = selectedItem   // updates label automatically
                     if !pattern.isEmpty {
                         emitTopPrediction()

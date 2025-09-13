@@ -3,7 +3,6 @@
 //  v7Keyboard
 //
 //  Created by Duc on 22/06/2025.
-//  Copyright © 2025 Ethan Sarif-Kattan. All rights reserved.
 //
 
 import Foundation
