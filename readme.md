@@ -2,7 +2,18 @@
 
 <div align="center">
 
-![V7 Keyboard Demo](storeAssets/demo.safari.PNG)
+<table>
+<tr>
+<td width="45%" style="padding: 10px;">
+<img src="storeAssets/demo.safari.PNG" alt="V7 Keyboard" width="100%">
+<p><em>Modern interface</em></p>
+</td>
+<td width="45%" style="padding: 10px;">
+<img src="storeAssets/demo.artificial-intelligence.mov" alt="AI-Powered Predictions" width="100%">
+<p><em>Experience intelligent Vietnamese typing with context-aware predictions and intuitive radial tone selection</em></p>
+</td>
+</tr>
+</table>
 
 > **Revolutionizing Vietnamese text input on iOS with cutting-edge AI technology**
 
@@ -15,18 +26,6 @@
 ## ✨ Overview
 
 **V7 Vietnamese Keyboard** is not just another input method – it's a **revolutionary AI-powered Vietnamese typing experience** that transforms how Vietnamese speakers communicate on mobile devices. Built with state-of-the-art machine learning technology and designed for the modern user, V7 brings unprecedented intelligence and efficiency to Vietnamese text input.
-
-## 🎬 See It In Action
-
-<div align="center">
-
-### AI-Powered Predictions & Radial Menu Interface
-
-![Demo Video](storeAssets/demo.artificial-intelligence.mov)
-
-*Experience intelligent Vietnamese typing with context-aware predictions and intuitive radial tone selection*
-
-</div>
 
 ## 🔥 Features & Technical Innovations
 
