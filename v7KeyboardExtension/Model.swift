@@ -30,17 +30,6 @@ func makeMLMultiArray(from value: Float) -> MLMultiArray? {
     }
 }
 
-
-//func model_predict(model: v7gpt_2_1_small_20250903_fp16, input: MLMultiArray) -> [Int]? {
-//    do {
-//        let output = try model.prediction(input_token_ids: input)
-//        return output.ranked_desc_token_idsShapedArray.scalars.map { Int($0) }
-//    } catch {
-//        keyboardLogger.error("Prediction error: \(error.localizedDescription)")
-//        return nil
-//    }
-//}
-
 func model_predict(
     model: v7gpt_2_2_small_20250909_with_bias,
     input: MLMultiArray,
