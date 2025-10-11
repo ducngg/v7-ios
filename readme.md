@@ -9,7 +9,7 @@
 <p><em>Modern interface</em></p>
 </td>
 <td width="45%" style="padding: 10px;">
-<img src="storeAssets/demo.artificial-intelligence.mov" alt="AI-Powered Predictions" width="100%">
+<img src="storeAssets/demo.artificial-intelligence.mp4" alt="AI-Powered Predictions" width="100%">
 <p><em>Experience intelligent Vietnamese typing with context-aware predictions and intuitive radial tone selection</em></p>
 </td>
 </tr>
