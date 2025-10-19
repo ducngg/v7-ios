@@ -192,16 +192,21 @@ class GPTTokenizer {
         if pattern.count > 6 {
             return result
         }
+        // rule 2: reject if contains digits or forbidden symbols
+        let invalidCharacterPattern = "[0-9'!()\\[\\]{}:;,.?/]"
+        if pattern.range(of: invalidCharacterPattern, options: .regularExpression) != nil {
+            return result
+        }
         
         // 🔹 Adjust special consonants
         if !toneMark.isEmpty, !pattern.isEmpty {
-            let firstChar = pattern.first!
+            let firstChar = pattern.first!.lowercased()
             let rest = String(pattern.dropFirst())
             switch firstChar {
-            case "j": effectivePattern = "ch" + rest
-            case "z": effectivePattern = "gi" + rest
-            case "f": effectivePattern = "ph" + rest
-            default: break
+                case "j": effectivePattern = "ch" + rest
+                case "z": effectivePattern = "gi" + rest
+                case "f": effectivePattern = "ph" + rest
+                default: break
             }
         }
         effectivePattern = effectivePattern.lowercased()

@@ -425,89 +425,100 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
     var radialKeyButton: UIButton?
 
     @objc func handleKeyPan(_ gesture: UIPanGestureRecognizer) {
-            guard let keyButton = gesture.view as? UIButton,
-                  let keyChar = keyButton.accessibilityLabel,
-                  let parentView = view else { return }
+        guard let keyButton = gesture.view as? UIButton,
+              let keyChar = keyButton.accessibilityLabel,
+              let parentView = view else { return }
 
-            let keyFrameInView = keyButton.superview?.convert(keyButton.frame, to: parentView) ?? .zero
+        let keyFrameInView = keyButton.superview?.convert(keyButton.frame, to: parentView) ?? .zero
 
-            switch gesture.state {
-            case .began:
-                radialKeyButton = keyButton
-                panStartPoint = gesture.location(in: parentView)
+        switch gesture.state {
+        case .began:
+            radialKeyButton = keyButton
+            panStartPoint = gesture.location(in: parentView)
 
-            case .changed:
-                guard let start = panStartPoint else { return }
-                let current = gesture.location(in: parentView)
-                let distance = hypot(current.x - start.x, current.y - start.y)
+        case .changed:
+            guard let start = panStartPoint else { return }
+            let current = gesture.location(in: parentView)
+            let distance = hypot(current.x - start.x, current.y - start.y)
 
-                if radialMenu == nil, distance > Constants.RADIAL_MENU_MOVEMENT_MIN_THRESHOLD_TO_SHOW {
-                    // Show menu only if moved enough
-                    showRadialMenu(
-                        at: CGPoint(x: keyFrameInView.midX, y: keyFrameInView.midY),
-                        for: keyChar
-                    )
-                }
+            // 🔹 Hide radial if moved too far
+            if distance > Constants.RADIAL_MENU_MOVEMENT_MAX_THRESHOLD_TO_SHOW {
+                radialMenu?.removeFromSuperview()
+                radialMenu = nil
+                return
+            }
 
-                // If menu is already showing, update selection
-                if let radialMenu = radialMenu {
-                    let touchInRadial = gesture.location(in: radialMenu)
-                    radialMenu.updateSelection(from: touchInRadial)
-                }
+            // 🔹 Show menu only if moved enough and not too far
+            if radialMenu == nil,
+               distance > Constants.RADIAL_MENU_MOVEMENT_MIN_THRESHOLD_TO_SHOW {
+                showRadialMenu(
+                    at: CGPoint(x: keyFrameInView.midX, y: keyFrameInView.midY),
+                    for: keyChar
+                )
+            }
+
+            // 🔹 Update selection if already showing
+            if let radialMenu = radialMenu {
+                let touchInRadial = gesture.location(in: radialMenu)
+                radialMenu.updateSelection(from: touchInRadial)
+            }
 
         case .ended, .cancelled:
             let term = shiftButtonState == .normal ? keyChar : keyChar.uppercased()
-                
-            if let selectedItem = radialMenu?.selectedItem {
+
+            // 🔹 If menu was dismissed due to over-move, ignore
+            guard let radialMenu = radialMenu else {
+                if !pattern.isEmpty { emitTopPrediction() }
+                insertTextAndTriggerChange(term)
+                return
+            }
+
+            if let selectedItem = radialMenu.selectedItem {
                 if selectedItem == "." || selectedItem == "," {
-                    // 🔹 Special handling for punctuation
+                    // Special punctuation handling
                     if !pattern.isEmpty && !currentTone.isEmpty {
                         emitTopPrediction()
                     }
-                    
                     if (proxy.documentContextBeforeInput ?? "").hasSuffix(" ") {
                         proxy.deleteBackward()
                     }
-                        
                     insertTextAndTriggerChange(selectedItem + " ")
                     resetCurrentTone()
                 } else {
-                    // 🔹 Normal tone-mark behavior
-                    currentTone = selectedItem   // updates label automatically
+                    // Normal tone-mark behavior
+                    currentTone = selectedItem
                     if !pattern.isEmpty {
                         emitTopPrediction()
                     }
                     insertTextAndTriggerChange(term)
                 }
             } else {
-                // 🔹 No radial selected → normal key insert
-                if !pattern.isEmpty {
-                    emitTopPrediction()
-                }
+                // No radial selection
+                if !pattern.isEmpty { emitTopPrediction() }
                 insertTextAndTriggerChange(term)
             }
 
             keyboardLogger.debug("\(term, privacy: .public) \(self.currentTone, privacy: .public)")
 
-            radialMenu?.removeFromSuperview()
-            radialMenu = nil
-            radialKeyButton = nil
+            radialMenu.removeFromSuperview()
+            self.radialMenu = nil
+            self.radialKeyButton = nil
 
             if shiftButtonState != .normal {
                 shiftButtonState = shiftButtonState == .caps ? .caps : .normal
                 loadKeys()
             }
 
-            // 🔹 Reset the key color
+            // Reset key color
             if let isSpecial = keyButton.layer.value(forKey: "isSpecial") as? Bool {
                 keyButton.backgroundColor = isSpecial ? Constants.specialKeyNormalColour : Constants.keyNormalColour
             }
-
 
         default:
             break
         }
     }
+
 
     func showRadialMenu(at center: CGPoint, for key: String) {
         if radialMenu == nil {

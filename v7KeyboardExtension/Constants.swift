@@ -26,6 +26,7 @@ enum Constants{
     static let BIAS_INCREMENT_STEP: Float = 50 / Float(VOCAB_SIZE)
     
     static let RADIAL_MENU_MOVEMENT_MIN_THRESHOLD_TO_SHOW: CGFloat = 5.0
+    static let RADIAL_MENU_MOVEMENT_MAX_THRESHOLD_TO_SHOW: CGFloat = 150.0
 
     static let fakeClear: UIColor = UIColor(white: 0.1, alpha: 0.01) // If using clear then very hard to press button
     static let textColor: UIColor = {
