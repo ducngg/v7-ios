@@ -470,6 +470,11 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
             guard let radialMenu = radialMenu else {
                 if !pattern.isEmpty { emitTopPrediction() }
                 insertTextAndTriggerChange(term)
+                
+                // 🔹 Reset key color when menu dismissed
+                if let isSpecial = keyButton.layer.value(forKey: "isSpecial") as? Bool {
+                    keyButton.backgroundColor = isSpecial ? Constants.specialKeyNormalColour : Constants.keyNormalColour
+                }
                 return
             }
 
