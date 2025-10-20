@@ -5,8 +5,8 @@
 <table>
 <tr>
 <td width="45%" style="padding: 10px;">
-<img src="storeAssets/demo.safari.PNG" alt="V7 Keyboard" width="100%">
-<p><em>Modern interface</em></p>
+<img src="storeAssets/demo.art.jpg" alt="V7 Keyboard" width="100%">
+<p><em>Artistic interface</em></p>
 </td>
 <td width="45%" style="padding: 10px;">
 <img src="storeAssets/demo.artificial-intelligence.gif" width="100%">
@@ -14,6 +14,11 @@
 </td>
 </tr>
 </table>
+<!-- 
+ffmpeg -i storeAssets/demo.artificial-intelligence.mp4 \
+  -filter_complex "[0:v]setpts=PTS/1.4,fps=12,scale=640:-1:flags=lanczos" \
+  -loop 0 storeAssets/demo.artificial-intelligence.gif 
+  -->
 
 
 > **Revolutionizing Vietnamese text input on iOS with cutting-edge AI technology**
