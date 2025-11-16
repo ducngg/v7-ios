@@ -1,4 +1,4 @@
-# 🚀 V7 Vietnamese Keyboard - The Future of Vietnamese Typing
+# ⎈︎ V7 Vietnamese Keyboard - The Future of Vietnamese Typing ⎈︎
 
 <div align="center">
 
@@ -38,7 +38,7 @@ ffmpeg -i storeAssets/demo.artificial-intelligence.mp4 \
 - **🧠 Custom GPT-2 Language Model** - 10M parameters optimized for Vietnamese with >70% top-1 prediction accuracy
 - **📚 Advanced Tokenization** - 21,869 Vietnamese-specific tokens with greedy merge algorithm for optimal word boundaries
 - **💾 Bias Vector Learning** - Personalization system that adapts to your vocabulary and writing style across sessions
-- **🎨 Radial Menu Interface** - Revolutionary gesture-based tone mark selection
+- **⎈︎ Radial Menu Interface** - Revolutionary gesture-based tone mark selection
 - **🎯 Smart Consonant Replacement** - Automatic conversion (j→ch, z→gi, f→ph) and Vietnamese phonetic pattern recognition
 - **🎪 Context-Aware Punctuation** - Smart punctuation menu accessible via spacebar radial gesture
 - **🌓 Adaptive Design** - Modern translucent UI that responds to iOS appearance modes
