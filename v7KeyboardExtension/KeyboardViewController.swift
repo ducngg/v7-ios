@@ -33,10 +33,10 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
     private func loadModel() {
         autoreleasepool {
             let config = MLModelConfiguration()
-            //        config.computeUnits = .cpuAndNeuralEngine   // avoids GPU memory overhead
+                    config.computeUnits = .cpuAndNeuralEngine   // avoids GPU memory overhead
             //        config.computeUnits = .cpuOnly
             //        config.computeUnits = .cpuAndGPU
-            config.computeUnits = .cpuOnly   // ✅ safest for extensions
+//            config.computeUnits = .cpuOnly   // ✅ safest for extensions
             do {
                 let t0 = Date()
                 model = try v7gpt_2_2_small_20250909_with_bias(configuration: config)
@@ -281,13 +281,24 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
     func didTapSuggestion(_ sender: UIButton, fromRadialMenu: Bool = false) {
         guard let word = sender.title(for: .normal) else { return }
         
-        // 🔸 Delete current pattern
-        for _ in 0..<pattern.count {
-            deleteBackwardAndTriggerChange()
+        // 🔸 Delete current pattern AND // 🔸 Insert selected word + space
+        // 🔹 Find first index from right that is a special
+        if let lastSpecialIndex = pattern.lastIndex(where: { gptTokenizer!.specials.contains($0) }) {
+            let deleteCount = pattern.distance(from: lastSpecialIndex, to: pattern.endIndex) - 1
+            for _ in 0..<deleteCount {
+                proxy.deleteBackward()
+            }
+            
+            insertTextAndTriggerChange(word)
+        } else {
+            for _ in 0..<pattern.count {
+                proxy.deleteBackward()
+            }
+            
+            insertTextAndTriggerChange(word + " ")
         }
         
         // 🔸 Insert selected word + space
-        insertTextAndTriggerChange(word + " ")
         suggestionBar?.arrangedSubviews.forEach { $0.removeFromSuperview() }
         
         // 🔸 Reset tone unless it comes from radial menu

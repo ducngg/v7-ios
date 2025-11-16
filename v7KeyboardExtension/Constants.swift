@@ -16,7 +16,7 @@ enum Constants{
     static let DEFAULT_CONTEXT = "bây giờ"
     static let TOP_K = 16
     static let MAX_FILTER_ITERATE = 2048
-    static let MAX_FILTER_ITERATE_VIET = 16384 // For rare words to be findable
+    static let MAX_FILTER_ITERATE_VIET = 21869 // 16384 // For rare words to be findable
     
     static let EXTRA_SUGGESTION_STEP: Int = 16
     static let EXTRA_SUGGESTION_MAX: Int = 64
@@ -75,7 +75,7 @@ enum Constants{
     
 	static let letterKeys = [
 		["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"], 
-		["a", "s", "d", "f", "g","h", "j", "k", "l"],
+		["a", "s", "d", "f", "g", "h", "j", "k", "l"],
 		["⇧", "z", "x", "c", "v", "b", "n", "m", "⌫"],
 		["123", "☻", "dấu cách", "⏎"]
 	]

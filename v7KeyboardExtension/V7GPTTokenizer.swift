@@ -22,7 +22,8 @@ class GPTTokenizer {
     private(set) var renumToneMark: [String?] = [nil]
     
     // New cached regex + specials
-    private let specials: String
+    let specials: String
+    let numbers: String
     private let allowRegex: NSRegularExpression
     private let specialsRegex: NSRegularExpression
     
@@ -57,6 +58,7 @@ class GPTTokenizer {
         }
         
         // ---- Build constants once ----
+        self.numbers = "0123456789"
         self.specials = ".,!?;:-_()[]{}'\"“”‘’/\\\\@#$%^&*+=<>~|`…"
         
         let baseVocab = enumData
@@ -187,21 +189,31 @@ class GPTTokenizer {
         extraSuggestion: Int
     ) -> [String] {
         var result: [String] = []
-        var effectivePattern = pattern
+        var currentPattern = pattern
         
         if pattern.count > 6 {
             return result
         }
         // rule 2: reject if contains digits or forbidden symbols
-        let invalidCharacterPattern = "[0-9'!()\\[\\]{}:;,.?/]"
-        if pattern.range(of: invalidCharacterPattern, options: .regularExpression) != nil {
+        let invalidCharacters = CharacterSet(charactersIn: self.numbers + self.specials)
+        let patternSet = CharacterSet(charactersIn: pattern)
+        if patternSet.isSubset(of: invalidCharacters) {
+            // all characters are in the forbidden set → reject
             return result
         }
         
+        // Remove characters on the left that are in specials
+        // Patterns like '@x' will still predict 'xin', and the front-end can still choose without delete '@'
+        if let firstNonSpecialIndex = currentPattern.firstIndex(where: { !specials.contains($0) }) {
+            currentPattern = String(currentPattern[firstNonSpecialIndex...])
+        }
+        
+        var effectivePattern = currentPattern
+        
         // 🔹 Adjust special consonants
-        if !toneMark.isEmpty, !pattern.isEmpty {
-            let firstChar = pattern.first!.lowercased()
-            let rest = String(pattern.dropFirst())
+        if !toneMark.isEmpty, !currentPattern.isEmpty {
+            let firstChar = currentPattern.first!.lowercased()
+            let rest = String(currentPattern.dropFirst())
             switch firstChar {
                 case "j": effectivePattern = "ch" + rest
                 case "z": effectivePattern = "gi" + rest
