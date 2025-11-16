@@ -4,6 +4,15 @@
 
 ## User settings
 */xcuserdata/
+# Xcode user data
+*.xcuserdatad/
+*.xccheckout
+*.moved-aside
+*.xcscmblueprint
+
+# SwiftPM user configs
+*.xcodeproj/xcuserdata/
+
 
 ## Obj-C/Swift specific
 *.hmap

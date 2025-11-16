@@ -18,7 +18,7 @@
                BlueprintIdentifier = "38BD214B22D592CA00C6795D"
                BuildableName = "v7KeyboardExtension.appex"
                BlueprintName = "v7KeyboardExtension"
-               ReferencedContainer = "container:v7Keyboard.xcodeproj">
+               ReferencedContainer = "container:v7-ios.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
          <BuildActionEntry
@@ -32,7 +32,7 @@
                BlueprintIdentifier = "38BD212F22D5907E00C6795D"
                BuildableName = "v7Keyboard.app"
                BlueprintName = "v7Keyboard"
-               ReferencedContainer = "container:v7Keyboard.xcodeproj">
+               ReferencedContainer = "container:v7-ios.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -48,7 +48,7 @@
             BlueprintIdentifier = "38BD214B22D592CA00C6795D"
             BuildableName = "v7KeyboardExtension.appex"
             BlueprintName = "v7KeyboardExtension"
-            ReferencedContainer = "container:v7Keyboard.xcodeproj">
+            ReferencedContainer = "container:v7-ios.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <Testables>
@@ -77,7 +77,7 @@
             BlueprintIdentifier = "38BD212F22D5907E00C6795D"
             BuildableName = "v7Keyboard.app"
             BlueprintName = "v7Keyboard"
-            ReferencedContainer = "container:v7Keyboard.xcodeproj">
+            ReferencedContainer = "container:v7-ios.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
    </LaunchAction>
@@ -95,7 +95,7 @@
             BlueprintIdentifier = "38BD212F22D5907E00C6795D"
             BuildableName = "v7Keyboard.app"
             BlueprintName = "v7Keyboard"
-            ReferencedContainer = "container:v7Keyboard.xcodeproj">
+            ReferencedContainer = "container:v7-ios.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

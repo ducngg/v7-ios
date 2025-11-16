@@ -210,7 +210,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 38BD212B22D5907E00C6795D /* Build configuration list for PBXProject "v7Keyboard" */;
+			buildConfigurationList = 38BD212B22D5907E00C6795D /* Build configuration list for PBXProject "v7-ios" */;
 			compatibilityVersion = "Xcode 9.3";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -518,7 +518,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		38BD212B22D5907E00C6795D /* Build configuration list for PBXProject "v7Keyboard" */ = {
+		38BD212B22D5907E00C6795D /* Build configuration list for PBXProject "v7-ios" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				38BD214322D5908100C6795D /* Debug */,
