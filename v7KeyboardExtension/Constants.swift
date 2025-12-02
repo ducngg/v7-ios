@@ -9,7 +9,8 @@
 import Foundation
 import UIKit
 
-enum Constants{
+enum Constants {
+    static let haveDD = false
     static let MAX_SEQUENCE_LEN = 32
     static let VOCAB_SIZE = 21869
     static let MODEL = "v7gpt-2.1-small-20250903-fp16"
@@ -27,6 +28,13 @@ enum Constants{
     
     static let RADIAL_MENU_MOVEMENT_MIN_THRESHOLD_TO_SHOW: CGFloat = 5.0
     static let RADIAL_MENU_MOVEMENT_MAX_THRESHOLD_TO_SHOW: CGFloat = 150.0
+    
+    static func keyboardHeight(isLandscape: Bool) -> CGFloat {
+        return isLandscape ? 150 : 230
+    }
+    static func suggestionBarHeight(isLandscape: Bool) -> CGFloat {
+        return isLandscape ? 30 : 40
+    }
 
     static let fakeClear: UIColor = UIColor(white: 0.1, alpha: 0.01) // If using clear then very hard to press button
     static let textColor: UIColor = {
@@ -63,6 +71,8 @@ enum Constants{
     
 //    static let defaultToneDisplay: String = "♥︎" // for love
     static let defaultToneDisplay: String = "ᯅ" // Apple vision
+//    static let defaultToneDisplay: String = "⎈︎" // Helm - RadialMenu
+
 //    static let defaultToneDisplay: String = {
 //        if UITraitCollection.current.userInterfaceStyle == .dark {
 //            return "D"
@@ -71,14 +81,17 @@ enum Constants{
 //        }
 //    }()
 
-
-    
-	static let letterKeys = [
-		["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"], 
-		["a", "s", "d", "f", "g", "h", "j", "k", "l"],
+	static let letterKeys = haveDD ? [
+		["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],
+		["a", "s", "d", "đ", "f", "g", "h", "j", "k", "l"],
 		["⇧", "z", "x", "c", "v", "b", "n", "m", "⌫"],
 		["123", "☻", "dấu cách", "⏎"]
-	]
+    ] : [
+        ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],
+        ["a", "s", "d", "f", "g", "h", "j", "k", "l"],
+        ["⇧", "z", "x", "c", "v", "b", "n", "m", "⌫"],
+        ["123", "☻", "dấu cách", "⏎"]
+    ]
 	static let numberKeys = [
 		["1", "2", "3", "4", "5", "6", "7", "8", "9", "0",],
 		["-", "/", ":", ";", "(", ")" , "$", "&", "@", "\""],
@@ -114,6 +127,7 @@ enum Constants{
     static let allowedRadialKeys: Set<String> = {
         var keys = Set((97...122).map { String(UnicodeScalar($0)! ) }) // a–z
         keys.insert("dấu cách") // dấu cách
+        keys.insert("đ")
         return keys
     }()
 }

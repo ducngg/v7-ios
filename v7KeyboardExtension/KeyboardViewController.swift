@@ -19,11 +19,17 @@ extension UILabel {
 var proxy : UITextDocumentProxy!
 
 class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
-		
+    
+    var isLandscape: Bool {
+        UIScreen.main.bounds.width > UIScreen.main.bounds.height
+    }
+    var keyboardHeightConstraint: NSLayoutConstraint?
+    var suggestionBarHeightConstraint: NSLayoutConstraint?
+
     var suggestionBar: UIStackView?
 	var keyboardView: UIView!
 	var keys: [UIButton] = []
-	var paddingViews: [UIButton] = []
+	var paddingViews: [UIView] = [UIView]()
 	var backspaceTimer: Timer?
     
     let gptTokenizer = GPTTokenizer()
@@ -86,11 +92,50 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
 	@IBOutlet weak var stackView2: UIStackView!
 	@IBOutlet weak var stackView3: UIStackView!
 	@IBOutlet weak var stackView4: UIStackView!
-	
-	
+    
+    func updateViewHeightConstraint() {
+        
+        let keyboardHeight: CGFloat = Constants.keyboardHeight(isLandscape: isLandscape)
+        let suggestionHeight: CGFloat = Constants.suggestionBarHeight(isLandscape: isLandscape)
+        
+        // Update keyboard constraint
+        if let existing = keyboardHeightConstraint {
+            view.removeConstraint(existing)
+        }
+        let kHeightConstraint = NSLayoutConstraint(
+            item: view!,
+            attribute: .height,
+            relatedBy: .equal,
+            toItem: nil,
+            attribute: .notAnAttribute,
+            multiplier: 1.0,
+            constant: keyboardHeight + suggestionHeight
+        )
+        view.addConstraint(kHeightConstraint)
+        keyboardHeightConstraint = kHeightConstraint
+        
+        // Update suggestion bar height
+        suggestionBarHeightConstraint?.constant = suggestionHeight
+    }
+    
     override func updateViewConstraints() {
         super.updateViewConstraints()
         keyboardView.frame.size = view.frame.size
+    }
+	
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        updateViewHeightConstraint()
+    }
+
+    override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
+        super.viewWillTransition(to: size, with: coordinator)
+        
+        coordinator.animate(alongsideTransition: { _ in
+            self.updateViewHeightConstraint()
+            self.loadKeys()
+            self.loadSuggestionBar() // refresh suggestion bar layout
+        })
     }
 
     override func viewDidLoad() {
@@ -99,7 +144,6 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         super.viewDidLoad()
         proxy = textDocumentProxy as UITextDocumentProxy
 
-        setupSuggestionBar()
         loadInterface()
         loadModel()
         
@@ -110,19 +154,6 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         predict()
     }
 
-    override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
-        let heightConstraint = NSLayoutConstraint(
-            item: view!,
-            attribute: .height,
-            relatedBy: .equal,
-            toItem: nil,
-            attribute: .notAnAttribute,
-            multiplier: 1.0,
-            constant: 260 // 220 keyboard + 40 suggestion bar
-        )
-        view.addConstraint(heightConstraint)
-    }
 
 //    override func viewWillLayoutSubviews() {
 //        super.viewWillLayoutSubviews()
@@ -138,13 +169,16 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
 //        self.nextKeyboardButton.isHidden = !self.needsInputModeSwitchKey
 //    }
 
-    func setupSuggestionBar() {
-        if suggestionBar != nil { return }
-
+    func loadSuggestionBar() {
+        if suggestionBar != nil {
+            return
+        }
+        
         let container = UIStackView()
         container.axis = .horizontal
         container.translatesAutoresizingMaskIntoConstraints = false
         container.backgroundColor = .clear
+        
         view.addSubview(container)
 
         // 🔹 Blur background (same as keyboardView)
@@ -203,10 +237,17 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
             container.topAnchor.constraint(equalTo: view.topAnchor),
             container.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             container.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            container.heightAnchor.constraint(equalToConstant: 40),
-
+        ])
+        
+        // Suggestion bar height constraint
+        let barHeight: CGFloat = Constants.suggestionBarHeight(isLandscape: isLandscape)
+        let heightConstraint = container.heightAnchor.constraint(equalToConstant: barHeight)
+        heightConstraint.isActive = true
+        suggestionBarHeightConstraint = heightConstraint
+        
+        NSLayoutConstraint.activate([
             scrollView.heightAnchor.constraint(equalTo: container.heightAnchor),
-
+            
             bar.topAnchor.constraint(equalTo: scrollView.topAnchor),
             bar.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
             bar.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
@@ -214,6 +255,30 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
             bar.heightAnchor.constraint(equalTo: scrollView.heightAnchor)
         ])
     }
+    
+    func loadInterface() {
+        // Load suggestion bar first
+        loadSuggestionBar()
+        
+        // Load keyboard view
+        let keyboardNib = UINib(nibName: "Keyboard", bundle: nil)
+        keyboardView = keyboardNib.instantiate(withOwner: self, options: nil)[0] as? UIView
+        keyboardView.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(keyboardView)
+        
+        NSLayoutConstraint.activate([
+            keyboardView.topAnchor.constraint(equalTo: suggestionBar?.bottomAnchor ?? view.topAnchor),
+            keyboardView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            keyboardView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            keyboardView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ])
+        
+        keyboardView.backgroundColor = Constants.backgroundColor
+        
+        // Load keys
+        loadKeys()
+    }
+    
     @objc func scrollViewDidScroll(_ scrollView: UIScrollView) {
         // check if user scrolled near the right edge
         let offsetX = scrollView.contentOffset.x
@@ -578,182 +643,192 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
 //		view.addSubview(keyboardView)
 //        loadKeys()
 //	}
-    
-    func loadInterface() {
-        let keyboardNib = UINib(nibName: "Keyboard", bundle: nil)
-        keyboardView = keyboardNib.instantiate(withOwner: self, options: nil)[0] as? UIView
-        keyboardView.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(keyboardView)
+	
+//	func addPadding(to stackView: UIStackView, width: CGFloat, key: String){
+//		let padding = UIButton(frame: CGRect(x: 0, y: 0, width: 5, height: 5))
+//		padding.setTitleColor(.clear, for: .normal)
+//		padding.alpha = 0.02
+//		padding.widthAnchor.constraint(equalToConstant: width).isActive = true
+//		
+//		//if we want to use this padding as a key, for example the a and l buttons
+//		let keyToDisplay = shiftButtonState == .normal ? key : key.capitalized
+//		padding.layer.setValue(key, forKey: "original")
+//		padding.layer.setValue(keyToDisplay, forKey: "keyToDisplay")
+//		padding.layer.setValue(false, forKey: "isSpecial")
+//		padding.addTarget(self, action: #selector(keyPressedTouchUp), for: .touchUpInside)
+//		padding.addTarget(self, action: #selector(keyTouchDown), for: .touchDown)
+//		padding.addTarget(self, action: #selector(keyUntouched), for: .touchDragExit)
+//		
+//		paddingViews.append(padding)
+//		stackView.addArrangedSubview(padding)
+//	}
+	
+    private func applyWidthRules(btn: UIButton, key: String, rowIndex: Int, totalMultiplier: CGFloat) {
 
-        NSLayoutConstraint.activate([
-            keyboardView.topAnchor.constraint(equalTo: suggestionBar?.bottomAnchor ?? view.topAnchor),
-            keyboardView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            keyboardView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            keyboardView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-        ])
-            
-        // 🔹 Set background based on system appearance
-        keyboardView.backgroundColor = Constants.backgroundColor
+        let isSpecial = ["⌫", "⏎", "#+=", "ABC", "123", "⇧"].contains(key)
 
-        loadKeys()
+        if isSpecial {
+            btn.layer.setValue(true, forKey: "isSpecial")
+            btn.backgroundColor = key == "⇧" && shiftButtonState != .normal
+                ? Constants.keyPressedColour
+                : Constants.specialKeyNormalColour
+
+            if key == "⇧", shiftButtonState == .caps {
+                btn.setTitle("⇪", for: .normal)
+            }
+
+            btn.widthAnchor.constraint(
+                equalTo: stackView1.widthAnchor,
+                multiplier: totalMultiplier * 1.2
+            ).isActive = true
+            return
+        }
+
+        // Special wider row for numbers/symbols
+        if (keyboardState == .numbers || keyboardState == .symbols) && rowIndex == 2 {
+            btn.widthAnchor.constraint(
+                equalTo: stackView1.widthAnchor,
+                multiplier: totalMultiplier * 1.4
+            ).isActive = true
+            return
+        }
+
+        // Normal key
+        if key != "dấu cách" {
+            btn.widthAnchor.constraint(
+                equalTo: stackView1.widthAnchor,
+                multiplier: totalMultiplier
+            ).isActive = true
+        }
     }
-	
-	func addPadding(to stackView: UIStackView, width: CGFloat, key: String){
-		let padding = UIButton(frame: CGRect(x: 0, y: 0, width: 5, height: 5))
-		padding.setTitleColor(.clear, for: .normal)
-		padding.alpha = 0.02
-		padding.widthAnchor.constraint(equalToConstant: width).isActive = true
-		
-		//if we want to use this padding as a key, for example the a and l buttons
-		let keyToDisplay = shiftButtonState == .normal ? key : key.capitalized
-		padding.layer.setValue(key, forKey: "original")
-		padding.layer.setValue(keyToDisplay, forKey: "keyToDisplay")
-		padding.layer.setValue(false, forKey: "isSpecial")
-		padding.addTarget(self, action: #selector(keyPressedTouchUp), for: .touchUpInside)
-		padding.addTarget(self, action: #selector(keyTouchDown), for: .touchDown)
-		padding.addTarget(self, action: #selector(keyUntouched), for: .touchDragExit)
-		
-		paddingViews.append(padding)
-		stackView.addArrangedSubview(padding)
-	}
-	
-	func loadKeys(){
-        
-//        let config = MLModelConfiguration()
-//        let model = try? v7gpt_2_1_large_20250827(configuration: config)
 
-		keys.forEach{$0.removeFromSuperview()}
-		paddingViews.forEach{$0.removeFromSuperview()}
-		
-        let maxKeyCount = (Constants.letterKeys.map { $0.count }.max() ?? 10) + 1
-        let buttonWidth = (UIScreen.main.bounds.width - 6) / CGFloat(maxKeyCount)
-//		let buttonWidth = (UIScreen.main.bounds.width - 6) / CGFloat(Constants.letterKeys[0].count)
-		
-		var keyboard: [[String]]
-		
-		//start padding
-		switch keyboardState {
-		case .letters:
-			keyboard = Constants.letterKeys
-            addPadding(to: stackView1, width: buttonWidth/2, key: "")
-            addPadding(to: stackView2, width: buttonWidth/2, key: "")
-            addPadding(to: stackView3, width: buttonWidth/2, key: "")
-            addPadding(to: stackView4, width: buttonWidth/2, key: "")
+    private func applyPadding(buttonWidthMultiplier: CGFloat) {
 
-            // Extra
-			addPadding(to: stackView2, width: buttonWidth/2, key: "")
-            
-		case .numbers:
-			keyboard = Constants.numberKeys
-            
-            addPadding(to: stackView4, width: buttonWidth/2, key: "")
-		case .symbols:
-			keyboard = Constants.symbolKeys
-            
-            addPadding(to: stackView4, width: buttonWidth/2, key: "")
-		}
-		
-		let numRows = keyboard.count
-		for row in 0...numRows - 1{
-			for col in 0...keyboard[row].count - 1{
-				let button = UIButton(type: .custom)
-				button.backgroundColor = Constants.keyNormalColour
-                button.setTitleColor(Constants.textColor, for: .normal)
-				let key = keyboard[row][col]
-                
-                // ✅ Only add pan gesture if key is in a–z
-                if Constants.allowedRadialKeys.contains(key.lowercased()) {
-                    let panGesture = UIPanGestureRecognizer(target: self, action: #selector(handleKeyPan(_:)))
-                    button.addGestureRecognizer(panGesture)
+        let paddingMultiplier = buttonWidthMultiplier / 4
+
+        func pad(_ stack: UIStackView) {
+            let padViewLeft = UIView()
+            let padViewRight = UIView()
+            padViewLeft.translatesAutoresizingMaskIntoConstraints = false
+            padViewRight.translatesAutoresizingMaskIntoConstraints = false
+
+            // left padding
+            stack.insertArrangedSubview(padViewLeft, at: 0)
+
+            // right padding
+            stack.addArrangedSubview(padViewRight)
+
+            // same width as before
+            padViewLeft.widthAnchor.constraint(
+                equalTo: stack.widthAnchor,
+                multiplier: paddingMultiplier
+            ).isActive = true
+            padViewRight.widthAnchor.constraint(
+                equalTo: stack.widthAnchor,
+                multiplier: paddingMultiplier
+            ).isActive = true
+
+            paddingViews.append(padViewLeft)
+            paddingViews.append(padViewRight)
+        }
+
+        switch keyboardState {
+        case .letters:
+            [stackView1, stackView2, stackView3, stackView4].forEach { pad($0) }
+
+        case .numbers, .symbols:
+            [stackView1, stackView2, stackView3, stackView4].forEach { pad($0) }
+//            pad(stackView4) // Only pad the final column
+        }
+    }
+
+    func loadKeys() {
+
+        // CLEAN OLD VIEWS
+        keys.forEach { $0.removeFromSuperview() }
+        paddingViews.forEach { $0.removeFromSuperview() }
+
+        keys.removeAll()
+        paddingViews.removeAll()
+
+        // SELECT KEYBOARD LAYOUT
+        let keyboard: [[String]]
+        switch keyboardState {
+        case .letters: keyboard = Constants.letterKeys
+        case .numbers: keyboard = Constants.numberKeys
+        case .symbols: keyboard = Constants.symbolKeys
+        }
+
+        // ORIENTATION-SAFE: SIZE BASED ON STACKVIEW WIDTH
+        let maxKeyCount = (keyboard.map { $0.count }.max() ?? 10) + 1
+        let buttonWidthMultiplier = 1.0 / CGFloat(maxKeyCount)
+
+        // ADD ROWS + BUTTONS
+        let rows = [stackView1, stackView2, stackView3, stackView4]
+
+        for (rowIndex, rowKeys) in keyboard.enumerated() {
+            let rowStack = rows[rowIndex]
+
+            for key in rowKeys {
+                let btn = UIButton(type: .custom)
+                btn.backgroundColor = Constants.keyNormalColour
+                btn.setTitleColor(Constants.textColor, for: .normal)
+                btn.layer.cornerRadius = 6
+                btn.accessibilityLabel = key
+
+                // SHIFT DISPLAY
+                let display: String
+                if key == "dấu cách" {
+                    display = key // always normal
+                } else {
+                    display = shiftButtonState == .normal ? key : key.capitalized
                 }
-                button.accessibilityLabel = key  // for identifying the key
+                btn.setTitle(display, for: .normal)
 
-				let capsKey = keyboard[row][col].capitalized
-				let keyToDisplay = shiftButtonState == .normal ? key : capsKey
-                
-				button.layer.setValue(key, forKey: "original")
-				button.layer.setValue(keyToDisplay, forKey: "keyToDisplay")
-				button.layer.setValue(false, forKey: "isSpecial")
-				button.setTitle(keyToDisplay, for: .normal)
-				button.layer.borderColor = keyboardView.backgroundColor?.cgColor
-                
-//                button.layer.borderWidth = 1
-                
-				button.addTarget(self, action: #selector(keyPressedTouchUp), for: .touchUpInside)
-				button.addTarget(self, action: #selector(keyTouchDown), for: .touchDown)
-				button.addTarget(self, action: #selector(keyUntouched), for: .touchDragExit)
-				button.addTarget(self, action: #selector(keyMultiPress(_:event:)), for: .touchDownRepeat)
+                // LAYER VALUES
+                btn.layer.setValue(key, forKey: "original")
+                btn.layer.setValue(display, forKey: "keyToDisplay")
+                btn.layer.setValue(false, forKey: "isSpecial")
 
-				if key == "⌫"{
-					let longPressRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(keyLongPressed(_:)))
-					button.addGestureRecognizer(longPressRecognizer)
-				}				
-				
-				button.layer.cornerRadius = buttonWidth/4
-                
-//                button.layer.shadowOpacity = 0.15
-//                button.layer.shadowOffset = CGSize(width: 0, height: 1.5)
-//                button.layer.shadowRadius = 1.5
+                // GESTURES (YOUR LOGIC UNTOUCHED)
+                if Constants.allowedRadialKeys.contains(key.lowercased()) {
+                    btn.addGestureRecognizer(UIPanGestureRecognizer(
+                        target: self, action: #selector(handleKeyPan(_:))
+                    ))
+                }
 
-                
-				keys.append(button)
-				switch row{
-                    case 0: stackView1.addArrangedSubview(button)
-                    case 1: stackView2.addArrangedSubview(button)
-                    case 2: stackView3.addArrangedSubview(button)
-                    case 3: stackView4.addArrangedSubview(button)
-                    default:
-                        break
-				}
-				
-				//top row is longest row so it should decide button width 
-				print("button width: ", buttonWidth)
-				if key == "⌫" || key == "⏎" || key == "#+=" || key == "ABC" || key == "123" || key == "⇧" {
-					button.widthAnchor.constraint(equalToConstant: buttonWidth + buttonWidth/2).isActive = true
-					button.layer.setValue(true, forKey: "isSpecial")
-					button.backgroundColor = Constants.specialKeyNormalColour
-					if key == "⇧" {
-						if shiftButtonState != .normal{
-							button.backgroundColor = Constants.keyPressedColour
-						}
-						if shiftButtonState == .caps{
-							button.setTitle("⇪", for: .normal)
-						}
-					}
-				}else if (keyboardState == .numbers || keyboardState == .symbols) && row == 2{
-					button.widthAnchor.constraint(equalToConstant: buttonWidth * 1.4).isActive = true
-				}else if key != "dấu cách"{
-					button.widthAnchor.constraint(equalToConstant: buttonWidth).isActive = true
-				}else{
-					button.layer.setValue(key, forKey: "original")
-					button.setTitle(key, for: .normal)
-				}
-			}
-		} 
-		
-		
-		//end padding
-		switch keyboardState {
-            case .letters:
-                // Extra
-                addPadding(to: stackView2, width: buttonWidth/2, key: "")
-            
-                addPadding(to: stackView1, width: buttonWidth/2, key: "")
-                addPadding(to: stackView2, width: buttonWidth/2, key: "")
-                addPadding(to: stackView3, width: buttonWidth/2, key: "")
-                addPadding(to: stackView4, width: buttonWidth/2, key: "")
+                if key == "⌫" {
+                    btn.addGestureRecognizer(UILongPressGestureRecognizer(
+                        target: self, action: #selector(keyLongPressed(_:))
+                    ))
+                }
 
-            case .numbers:
-            
-                addPadding(to: stackView4, width: buttonWidth/2, key: "")
-                break
-            case .symbols:
-        
-                addPadding(to: stackView4, width: buttonWidth/2, key: "")
-                break
-		}
-		
-	}
+                // BUTTON TARGETS (UNCHANGED)
+                btn.addTarget(self, action: #selector(keyPressedTouchUp), for: .touchUpInside)
+                btn.addTarget(self, action: #selector(keyTouchDown), for: .touchDown)
+                btn.addTarget(self, action: #selector(keyUntouched), for: .touchDragExit)
+                btn.addTarget(self, action: #selector(keyMultiPress(_:event:)), for: .touchDownRepeat)
+
+                rowStack?.addArrangedSubview(btn)
+                keys.append(btn)
+
+                // WIDTH RULES
+                applyWidthRules(
+                    btn: btn,
+                    key: key,
+                    rowIndex: rowIndex,
+                    totalMultiplier: buttonWidthMultiplier
+                )
+            }
+        }
+//        keys.forEach { key in
+//            key.heightAnchor.constraint(equalTo: keyboardView.heightAnchor, multiplier: isLandscape ? 0.13 : 0.20).isActive = true
+//        }
+
+        // UNIFIED PADDING SYSTEM
+        applyPadding(buttonWidthMultiplier: buttonWidthMultiplier)
+    }
+
 		
 	func changeKeyboardToNumberKeys(){
 		keyboardState = .numbers

@@ -197,11 +197,10 @@ class GPTTokenizer {
         // rule 2: reject if contains digits or forbidden symbols
         let invalidCharacters = CharacterSet(charactersIn: self.numbers + self.specials)
         let patternSet = CharacterSet(charactersIn: pattern)
-        if patternSet.isSubset(of: invalidCharacters) {
-            // all characters are in the forbidden set → reject
+        if !pattern.isEmpty && patternSet.isSubset(of: invalidCharacters) {
             return result
         }
-        
+
         // Remove characters on the left that are in specials
         // Patterns like '@x' will still predict 'xin', and the front-end can still choose without delete '@'
         if let firstNonSpecialIndex = currentPattern.firstIndex(where: { !specials.contains($0) }) {
@@ -276,7 +275,7 @@ class GPTTokenizer {
     private func normalizeChar(_ char: Character) -> Character {
         switch char {
         case "đ":
-            return "d"
+            return Constants.haveDD ? "đ" : "d"
         case "ă", "ắ", "ằ", "ẳ", "ẵ", "ặ", "â", "ấ", "ầ", "ẩ", "ẫ", "ậ", "á", "à", "ả", "ã", "ạ":
             return "a"
         case "ê", "ế", "ề", "ể", "ễ", "ệ", "é", "è", "ẻ", "ẽ", "ẹ":
