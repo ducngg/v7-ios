@@ -8,6 +8,9 @@
 import UIKit
 
 class RadialMenuView: UIView {
+    private let haptic = UIImpactFeedbackGenerator(style: .light)
+
+    var prevSelectedIndex: Int? = nil
     var selectedIndex: Int? = nil
     var selectedItem: String? = nil
 
@@ -20,6 +23,7 @@ class RadialMenuView: UIView {
         super.init(frame: frame)
         self.backgroundColor = .clear
         self.isUserInteractionEnabled = false
+        haptic.prepare()
     }
 
     required init?(coder: NSCoder) {
@@ -74,11 +78,19 @@ class RadialMenuView: UIView {
         let positiveAngle = (angle >= 0 ? angle : angle + 2 * .pi)
         let adjustedAngle = positiveAngle - angleOffset
 
-        let index = Int(adjustedAngle / (2 * .pi) * CGFloat(numberOfSectors)) % numberOfSectors
-        selectedIndex = index
-        selectedItem = items[index]
+        let newIndex = Int(adjustedAngle / (2 * .pi) * CGFloat(numberOfSectors)) % numberOfSectors
+
+        // 🔥 Fire haptic only when changing sectors
+        if newIndex != selectedIndex {
+            haptic.impactOccurred()
+            haptic.prepare()     // optional: makes next tap faster
+        }
+
+        selectedIndex = newIndex
+        selectedItem = items[newIndex]
 
         setNeedsDisplay()
     }
+
 }
 

@@ -170,6 +170,11 @@ class GPTTokenizer {
 
         // 🔹 Pattern check
         if !effectivePattern.isEmpty {
+            // If remove this, effectivePattern="thanh" will still match word="tha"
+            if word.count < effectivePattern.count {
+                return false
+            }
+            
             let prefixChars = effectivePattern.map { normalizeChar($0) }
             for (i, ch) in word.enumerated() {
                 if i >= prefixChars.count { break }

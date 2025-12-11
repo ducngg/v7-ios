@@ -10,7 +10,7 @@ import Foundation
 import UIKit
 
 enum Constants {
-    static let haveDD = false
+    static let haveDD = true // enable "đ"
     static let MAX_SEQUENCE_LEN = 32
     static let VOCAB_SIZE = 21869
     static let MODEL = "v7gpt-2.1-small-20250903-fp16"
@@ -30,7 +30,7 @@ enum Constants {
     static let RADIAL_MENU_MOVEMENT_MAX_THRESHOLD_TO_SHOW: CGFloat = 150.0
     
     static func keyboardHeight(isLandscape: Bool) -> CGFloat {
-        return isLandscape ? 150 : 230
+        return isLandscape ? 140 : 230
     }
     static func suggestionBarHeight(isLandscape: Bool) -> CGFloat {
         return isLandscape ? 30 : 40
@@ -38,17 +38,18 @@ enum Constants {
 
     static let fakeClear: UIColor = UIColor(white: 0.1, alpha: 0.01) // If using clear then very hard to press button
     static let textColor: UIColor = {
-        if UITraitCollection.current.userInterfaceStyle == .dark {
-            return UIColor.white
-        } else {
+        if UITraitCollection.current.userInterfaceStyle == .light {
             return UIColor.black
+        } else {
+            return UIColor.white
         }
     }()
     static let backgroundColor: UIColor = {
-        if UITraitCollection.current.userInterfaceStyle == .dark {
-            return fakeClear
-        } else {
+        if UITraitCollection.current.userInterfaceStyle == .light {
             return UIColor(white: 1, alpha: 0.25)
+        } else {
+            return fakeClear
+            //            return UIColor(white: 0.1, alpha: 0.25)
         }
     }()
 
@@ -72,6 +73,13 @@ enum Constants {
 //    static let defaultToneDisplay: String = "♥︎" // for love
     static let defaultToneDisplay: String = "ᯅ" // Apple vision
 //    static let defaultToneDisplay: String = "⎈︎" // Helm - RadialMenu
+//    static let defaultToneDisplay: String = {
+//        if UITraitCollection.current.userInterfaceStyle == .light {
+//            return "L"
+//        } else {
+//            return "D"
+//        }
+//    }()
 
 //    static let defaultToneDisplay: String = {
 //        if UITraitCollection.current.userInterfaceStyle == .dark {

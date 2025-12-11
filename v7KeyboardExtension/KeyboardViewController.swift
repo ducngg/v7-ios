@@ -19,7 +19,8 @@ extension UILabel {
 var proxy : UITextDocumentProxy!
 
 class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
-    
+    let keyPressHaptic = UIImpactFeedbackGenerator(style: .light)
+
     var isLandscape: Bool {
         UIScreen.main.bounds.width > UIScreen.main.bounds.height
     }
@@ -142,6 +143,8 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
 //        NSLog("%0.4f", CGFloat.pi)
 
         super.viewDidLoad()
+        keyPressHaptic.prepare()
+
         proxy = textDocumentProxy as UITextDocumentProxy
 
         loadInterface()
@@ -765,6 +768,12 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
 
         // ADD ROWS + BUTTONS
         let rows = [stackView1, stackView2, stackView3, stackView4]
+        // Apply padding + spacing to every row
+        rows.forEach { row in
+            row?.isLayoutMarginsRelativeArrangement = true
+            row?.layoutMargins = UIEdgeInsets(top: 4, left: 4, bottom: 4, right: 4)
+            row?.spacing = 6   // horizontal spacing between buttons
+        }
 
         for (rowIndex, rowKeys) in keyboard.enumerated() {
             let rowStack = rows[rowIndex]
@@ -775,6 +784,9 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
                 btn.setTitleColor(Constants.textColor, for: .normal)
                 btn.layer.cornerRadius = 6
                 btn.accessibilityLabel = key
+                btn.contentEdgeInsets = UIEdgeInsets(top: 8, left: 6, bottom: 8, right: 6)
+                btn.clipsToBounds = true
+                btn.backgroundColor = Constants.keyNormalColour  // currently fakeClear
 
                 // SHIFT DISPLAY
                 let display: String
@@ -863,6 +875,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
 
 	
 	@IBAction func keyPressedTouchUp(_ sender: UIButton) {
+        keyPressHaptic.impactOccurred()
 		guard let originalKey = sender.layer.value(forKey: "original") as? String, let keyToDisplay = sender.layer.value(forKey: "keyToDisplay") as? String else {return}
 		
 		guard let isSpecial = sender.layer.value(forKey: "isSpecial") as? Bool else {return}
