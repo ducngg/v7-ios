@@ -36,58 +36,92 @@ enum Constants {
         return isLandscape ? 30 : 40
     }
 
-    static let fakeClear: UIColor = UIColor(white: 0.1, alpha: 0.01) // If using clear then very hard to press button
-    static let textColor: UIColor = {
-        if UITraitCollection.current.userInterfaceStyle == .light {
-            return UIColor.black
+    static let fakeClear: UIColor = UIColor(white: 0.01, alpha: 0.01) // If using clear then very hard to press button
+    // Using UIColor(dynamicProvider:) allows the color to automatically resolve
+    // based on the trait collection of the view it is applied to.
+    static let textColor: UIColor = UIColor { traitCollection in
+        if traitCollection.userInterfaceStyle == .dark {
+            return .white
         } else {
-            return UIColor.white
+            return .black
         }
-    }()
-    static let backgroundColor: UIColor = {
-        if UITraitCollection.current.userInterfaceStyle == .light {
-            return UIColor(white: 1, alpha: 0.25)
+    }
+    
+    static let backgroundColor: UIColor = UIColor { traitCollection in
+        if traitCollection.userInterfaceStyle == .dark {
+            return fakeClear
         } else {
             return fakeClear
-            //            return UIColor(white: 0.1, alpha: 0.25)
+//            return UIColor(white: 0.85, alpha: 0.25)
         }
-    }()
-
-//	static let keyNormalColour: UIColor = .white
-    static let keyNormalColour: UIColor = fakeClear // .clear
-    static let keyPressedColour: UIColor = UIColor(white: 0.85, alpha: 0.2)
-    
-//    static let specialKeyNormalColour: UIColor = UIColor(white: 0.85, alpha: 1.0)
-    static let specialKeyNormalColour: UIColor = fakeClear
-    
+    }
+        
+    static let keyNormalColour: UIColor = UIColor { traitCollection in
+        if traitCollection.userInterfaceStyle == .dark {
+            return fakeClear
+        } else {
+            return fakeClear
+//            return UIColor(white: 1.0, alpha: 1.0)
+        }
+    }
+        
+    static let keyPressedColour: UIColor = UIColor { traitCollection in
+        if traitCollection.userInterfaceStyle == .dark {
+            return UIColor(white: 0.85, alpha: 0.2)
+        } else {
+            return UIColor(white: 0.45, alpha: 0.4)
+//            return UIColor(white: 0.55, alpha: 0.8)
+        }
+    }
+        
+    static let specialKeyNormalColour: UIColor = UIColor { traitCollection in
+        if traitCollection.userInterfaceStyle == .dark {
+            return fakeClear
+        } else {
+            return fakeClear
+//            return UIColor(white: 0.7, alpha: 1.0)
+        }
+    }
+        
     // Radial Menu Colors
     static let radialMenuSelected: CGColor = UIColor.systemBlue.withAlphaComponent(0.95).cgColor
-    static let radialMenuUnselected: CGColor = {
-        if UITraitCollection.current.userInterfaceStyle == .dark {
-            return UIColor(white: 0.1, alpha: 0.94).cgColor
-        } else {
-            return UIColor(white: 0.95, alpha: 0.94).cgColor
+        
+    // Since this must be a CGColor, we must use a computed property that
+    // re-evaluates the UIColor's dynamic provider every time it is accessed.
+    static var radialMenuUnselected: CGColor {
+        // Define the UIColor dynamically
+        let dynamicUIColor = UIColor { traitCollection in
+            if traitCollection.userInterfaceStyle == .dark {
+                return UIColor(white: 0.1, alpha: 0.94)
+            } else {
+                return UIColor(white: 0.9, alpha: 0.94)
+            }
         }
-    }()
+        // Accessing the .cgColor property on a dynamic UIColor forces it to resolve
+        // based on the *current* trait collection of the context where it is called.
+        return dynamicUIColor.cgColor
+    }
+        
+    // MARK: - Non-Color Constants
     
-//    static let defaultToneDisplay: String = "♥︎" // for love
-    static let defaultToneDisplay: String = "ᯅ" // Apple vision
-//    static let defaultToneDisplay: String = "⎈︎" // Helm - RadialMenu
-//    static let defaultToneDisplay: String = {
+    // Use a static computed property (`var`) for the default tone display
+    // so that it checks the current trait collection on every access.
+    //
+    // WARNING: For keyboard extensions, this still relies on UITraitCollection.current,
+    // which may not always be the correct trait collection. For reliability,
+    // consider passing the view's trait collection to a static function.
+    //    static let defaultToneDisplay: String = "♥︎" // for love
+        static let defaultToneDisplay: String = "ᯅ" // Apple vision
+//        static let defaultToneDisplay: String = "⎈︎" // Helm - RadialMenu
+//    static var defaultToneDisplay: String {
 //        if UITraitCollection.current.userInterfaceStyle == .light {
 //            return "L"
-//        } else {
-//            return "D"
-//        }
-//    }()
-
-//    static let defaultToneDisplay: String = {
-//        if UITraitCollection.current.userInterfaceStyle == .dark {
+//        } else if UITraitCollection.current.userInterfaceStyle == .dark {
 //            return "D"
 //        } else {
-//            return "L"
+//            return "U" // Unspecified
 //        }
-//    }()
+//    }
 
 	static let letterKeys = haveDD ? [
 		["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],

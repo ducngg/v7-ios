@@ -705,46 +705,6 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         }
     }
 
-    private func applyPadding(buttonWidthMultiplier: CGFloat) {
-
-        let paddingMultiplier = buttonWidthMultiplier / 4
-
-        func pad(_ stack: UIStackView) {
-            let padViewLeft = UIView()
-            let padViewRight = UIView()
-            padViewLeft.translatesAutoresizingMaskIntoConstraints = false
-            padViewRight.translatesAutoresizingMaskIntoConstraints = false
-
-            // left padding
-            stack.insertArrangedSubview(padViewLeft, at: 0)
-
-            // right padding
-            stack.addArrangedSubview(padViewRight)
-
-            // same width as before
-            padViewLeft.widthAnchor.constraint(
-                equalTo: stack.widthAnchor,
-                multiplier: paddingMultiplier
-            ).isActive = true
-            padViewRight.widthAnchor.constraint(
-                equalTo: stack.widthAnchor,
-                multiplier: paddingMultiplier
-            ).isActive = true
-
-            paddingViews.append(padViewLeft)
-            paddingViews.append(padViewRight)
-        }
-
-        switch keyboardState {
-        case .letters:
-            [stackView1, stackView2, stackView3, stackView4].forEach { pad($0) }
-
-        case .numbers, .symbols:
-            [stackView1, stackView2, stackView3, stackView4].forEach { pad($0) }
-//            pad(stackView4) // Only pad the final column
-        }
-    }
-
     func loadKeys() {
 
         // CLEAN OLD VIEWS
@@ -768,11 +728,11 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
 
         // ADD ROWS + BUTTONS
         let rows = [stackView1, stackView2, stackView3, stackView4]
-        // Apply padding + spacing to every row
+        // Row-level spacing
         rows.forEach { row in
             row?.isLayoutMarginsRelativeArrangement = true
-            row?.layoutMargins = UIEdgeInsets(top: 4, left: 4, bottom: 4, right: 4)
-            row?.spacing = 6   // horizontal spacing between buttons
+            row?.layoutMargins = UIEdgeInsets(top: 3, left: 10, bottom: 3, right: 10)
+            row?.spacing = 8
         }
 
         for (rowIndex, rowKeys) in keyboard.enumerated() {
@@ -780,14 +740,22 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
 
             for key in rowKeys {
                 let btn = UIButton(type: .custom)
-                btn.backgroundColor = Constants.keyNormalColour
                 btn.setTitleColor(Constants.textColor, for: .normal)
-                btn.layer.cornerRadius = 6
+                
+                btn.layer.cornerRadius = 8
+                btn.clipsToBounds = false
+                
                 btn.accessibilityLabel = key
-                btn.contentEdgeInsets = UIEdgeInsets(top: 8, left: 6, bottom: 8, right: 6)
                 btn.clipsToBounds = true
                 btn.backgroundColor = Constants.keyNormalColour  // currently fakeClear
-
+                
+                // ⭐️ Bottom shadow
+                btn.layer.shadowColor = UIColor.black.cgColor
+                btn.layer.shadowOpacity = 0.35 // Increased opacity for visibility
+                btn.layer.shadowRadius = 1.5   // Smaller radius for a tighter shadow
+                btn.layer.shadowOffset = CGSize(width: 0, height: 1.0) // Slight downward offset
+                btn.layer.shadowPath = UIBezierPath(roundedRect: btn.bounds, cornerRadius: 8).cgPath
+                
                 // SHIFT DISPLAY
                 let display: String
                 if key == "dấu cách" {
@@ -833,12 +801,6 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
                 )
             }
         }
-//        keys.forEach { key in
-//            key.heightAnchor.constraint(equalTo: keyboardView.heightAnchor, multiplier: isLandscape ? 0.13 : 0.20).isActive = true
-//        }
-
-        // UNIFIED PADDING SYSTEM
-        applyPadding(buttonWidthMultiplier: buttonWidthMultiplier)
     }
 
 		
