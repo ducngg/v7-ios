@@ -1,8 +1,7 @@
 <p align="center">
-  <img src="v7Keyboard/Assets.xcassets/logo13122025.imageset/v7.2.0.logo.appdisplay.full.png"
+  <img src="storeAssets/v7.2.0.logo.round-cornered.appdisplay.full.png"
        alt="V7 Vietnamese Keyboard Logo"
        width="150"
-       style="border-radius: 40px;">
 </p>
 
 
@@ -95,10 +94,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **-Revolutionize typing Vietnamese-**
 <p align="center">
-  <img src="v7Keyboard/Assets.xcassets/logo13122025.imageset/v7.2.0.logo.appdisplay.full.png"
+  <img src="storeAssets/v7.2.0.logo.round-cornered.appdisplay.full.png"
        alt="V7 Vietnamese Keyboard Logo"
        width="100"
-       style="border-radius: 30px;">
 </p>
 
 </div>
