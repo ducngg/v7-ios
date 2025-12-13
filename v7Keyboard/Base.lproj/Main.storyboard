@@ -20,19 +20,19 @@
                                 <rect key="frame" x="0.0" y="0.0" width="375" height="812"/>
                             </imageView>
                             <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="wNQ-WS-San">
-                                <rect key="frame" x="0.0" y="39" width="375" height="734"/>
+                                <rect key="frame" x="0.0" y="84" width="375" height="644"/>
                                 <connections>
                                     <action selector="dismissKeyboardPressed:" destination="BYZ-38-t0r" eventType="touchUpInside" id="ZEl-Rb-I8g"/>
                                 </connections>
                             </button>
-                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Install Keyboard:" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" minimumScaleFactor="0.29999999999999999" translatesAutoresizingMaskIntoConstraints="NO" id="2Yo-Qc-baO">
-                                <rect key="frame" x="37.666666666666657" y="64" width="300" height="36"/>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" misplaced="YES" text="Hướng dẫn cài đặt" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" minimumScaleFactor="0.29999999999999999" translatesAutoresizingMaskIntoConstraints="NO" id="2Yo-Qc-baO">
+                                <rect key="frame" x="37" y="286" width="300" height="42.666666666666686"/>
                                 <fontDescription key="fontDescription" style="UICTFontTextStyleTitle0"/>
                                 <color key="textColor" white="0.0" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                 <nil key="highlightedColor"/>
                             </label>
                             <textView clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" textAlignment="natural" translatesAutoresizingMaskIntoConstraints="NO" id="aqf-es-2wB">
-                                <rect key="frame" x="37.666666666666657" y="105" width="300" height="653"/>
+                                <rect key="frame" x="37.666666666666657" y="407.66666666666674" width="300" height="316.33333333333326"/>
                                 <color key="textColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                 <fontDescription key="fontDescription" style="UICTFontTextStyleBody"/>
                                 <textInputTraits key="textInputTraits" autocapitalizationType="sentences"/>
@@ -50,7 +50,7 @@
                             <constraint firstItem="2Yo-Qc-baO" firstAttribute="centerX" secondItem="8bC-Xf-vdC" secondAttribute="centerX" id="PQp-ip-A36"/>
                             <constraint firstItem="fV8-bd-sgm" firstAttribute="centerX" secondItem="8bC-Xf-vdC" secondAttribute="centerX" id="PhN-Am-TjF"/>
                             <constraint firstItem="wNQ-WS-San" firstAttribute="height" secondItem="6Tk-OE-BBY" secondAttribute="height" id="WFi-c1-Ezs"/>
-                            <constraint firstItem="2Yo-Qc-baO" firstAttribute="top" secondItem="6Tk-OE-BBY" secondAttribute="top" constant="20" id="WIS-hb-aoA"/>
+                            <constraint firstItem="2Yo-Qc-baO" firstAttribute="top" secondItem="6Tk-OE-BBY" secondAttribute="top" constant="260" id="WIS-hb-aoA"/>
                             <constraint firstItem="wNQ-WS-San" firstAttribute="centerY" secondItem="8bC-Xf-vdC" secondAttribute="centerY" id="ZRo-WM-2eF"/>
                             <constraint firstItem="aqf-es-2wB" firstAttribute="top" secondItem="2Yo-Qc-baO" secondAttribute="bottom" constant="5" id="cG7-3h-ICc"/>
                             <constraint firstItem="fV8-bd-sgm" firstAttribute="height" secondItem="8bC-Xf-vdC" secondAttribute="height" id="gFb-aK-sRH"/>

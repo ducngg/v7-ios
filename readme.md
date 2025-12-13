@@ -1,3 +1,12 @@
+<p align="center">
+  <img src="v7Keyboard/Assets.xcassets/logo13122025.imageset/v7.2.0.logo.appdisplay.full.png"
+       alt="V7 Vietnamese Keyboard Logo"
+       width="150"
+       style="border-radius: 40px;">
+</p>
+
+
+
 # ⎈︎ V7 Vietnamese Keyboard - The Future of Vietnamese Typing ⎈︎
 
 <div align="center">
@@ -39,12 +48,11 @@ ffmpeg -i storeAssets/demo.artificial-intelligence.mp4 \
 - **📚 Advanced Tokenization** - 21,869 Vietnamese-specific tokens with greedy merge algorithm for optimal word boundaries
 - **💾 Bias Vector Learning** - Personalization system that adapts to your vocabulary and writing style across sessions
 - **⎈︎ Radial Menu Interface** - Revolutionary gesture-based tone mark selection
-- **🎯 Smart Consonant Replacement** - Automatic conversion (j→ch, z→gi, f→ph) and Vietnamese phonetic pattern recognition
 - **🎪 Context-Aware Punctuation** - Smart punctuation menu accessible via spacebar radial gesture
 - **🌓 Adaptive Design** - Modern translucent UI that responds to iOS appearance modes
 - **⚡ CoreML Optimized** - Native iOS inference with Neural Engine for near real-time response
 
-**Tone Marks**: ◌́ (sắc) · ◌̀ (huyền) · ◌̉ (hỏi) · ◌̃ (ngã) · ◌̣ (nặng) · ◌ (không dấu)
+**Tone Marks**: ◌́ (sắc) · ◌̀ (huyền) · ◌̉ (hỏi) · ◌̃ (ngã) · ◌̣ (nặng) · ◌ (ngang-không dấu)
 
 ## 📊 Technical Specifications
 
@@ -72,14 +80,11 @@ v7-ios/
 │   └── Constants.swift             # Configuration
 ```
 
-### Key Technologies
-**Swift 5** · **CoreML** · **UIKit** · **Neural Engine** · **MLMultiArray**
-
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - [karpathy/nanoGPT](https://github.com/karpathy/nanoGPT) - Base model architecture and training framework
 - [EthanSK](https://github.com/EthanSK) - iOS keyboard extension foundation
@@ -89,5 +94,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 <div align="center">
 
 **-Revolutionize typing Vietnamese-**
+<p align="center">
+  <img src="v7Keyboard/Assets.xcassets/logo13122025.imageset/v7.2.0.logo.appdisplay.full.png"
+       alt="V7 Vietnamese Keyboard Logo"
+       width="100"
+       style="border-radius: 30px;">
+</p>
 
 </div>

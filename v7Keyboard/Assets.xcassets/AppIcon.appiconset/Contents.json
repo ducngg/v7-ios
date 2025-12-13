@@ -1,11 +1,13 @@
 {
   "images" : [
     {
+      "filename" : "v7.2.0.logo.appdisplay.40.png",
       "idiom" : "iphone",
       "scale" : "2x",
       "size" : "20x20"
     },
     {
+      "filename" : "v7.2.0.logo.appdisplay.60.png",
       "idiom" : "iphone",
       "scale" : "3x",
       "size" : "20x20"
@@ -46,22 +48,25 @@
       "size" : "57x57"
     },
     {
+      "filename" : "v7.2.0.logo.appdisplay.120.png",
       "idiom" : "iphone",
       "scale" : "2x",
       "size" : "60x60"
     },
     {
-      "filename" : "logo05022025.png",
+      "filename" : "v7.2.0.logo.appdisplay.180.png",
       "idiom" : "iphone",
       "scale" : "3x",
       "size" : "60x60"
     },
     {
+      "filename" : "v7.2.0.logo.appdisplay.20.png",
       "idiom" : "ipad",
       "scale" : "1x",
       "size" : "20x20"
     },
     {
+      "filename" : "v7.2.0.logo.appdisplay.40 1.png",
       "idiom" : "ipad",
       "scale" : "2x",
       "size" : "20x20"
@@ -92,7 +97,7 @@
       "size" : "76x76"
     },
     {
-      "filename" : "CircleIconSpikes 2-2.png",
+      "filename" : "v7.2.0.logo.appdisplay.152.png",
       "idiom" : "ipad",
       "scale" : "2x",
       "size" : "76x76"
@@ -103,7 +108,7 @@
       "size" : "83.5x83.5"
     },
     {
-      "filename" : "CircleIconSpikes 2.png",
+      "filename" : "v7.2.0.logo.appdisplay.full.png",
       "idiom" : "ios-marketing",
       "scale" : "1x",
       "size" : "1024x1024"
@@ -114,6 +119,7 @@
       "size" : "512x512"
     },
     {
+      "filename" : "v7.2.0.logo.appdisplay.full 1.png",
       "idiom" : "mac",
       "scale" : "2x",
       "size" : "512x512"

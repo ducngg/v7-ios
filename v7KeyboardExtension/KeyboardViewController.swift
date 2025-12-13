@@ -731,7 +731,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         // Row-level spacing
         rows.forEach { row in
             row?.isLayoutMarginsRelativeArrangement = true
-            row?.layoutMargins = UIEdgeInsets(top: 3, left: 10, bottom: 3, right: 10)
+            row?.layoutMargins = UIEdgeInsets(top: 2, left: 16, bottom: 2, right: 16)
             row?.spacing = 8
         }
 
