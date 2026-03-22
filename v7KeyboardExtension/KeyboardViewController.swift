@@ -742,6 +742,9 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
             for key in rowKeys {
                 let btn = UIButton(type: .custom)
                 btn.setTitleColor(Constants.textColor, for: .normal)
+                if !Constants.specialKeys.contains(key) {
+                    btn.titleLabel?.font = Constants.textFont
+                }
                 
                 btn.layer.cornerRadius = 8
                 btn.clipsToBounds = false
@@ -750,12 +753,12 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
                 btn.clipsToBounds = true
                 btn.backgroundColor = Constants.keyNormalColour  // currently fakeClear
                 
-                // ⭐️ Bottom shadow
-                btn.layer.shadowColor = UIColor.black.cgColor
-                btn.layer.shadowOpacity = 0.35 // Increased opacity for visibility
-                btn.layer.shadowRadius = 1.5   // Smaller radius for a tighter shadow
-                btn.layer.shadowOffset = CGSize(width: 0, height: 1.0) // Slight downward offset
-                btn.layer.shadowPath = UIBezierPath(roundedRect: btn.bounds, cornerRadius: 8).cgPath
+//                // ⭐️ Bottom shadow
+//                btn.layer.shadowColor = UIColor.black.cgColor
+//                btn.layer.shadowOpacity = 0.35 // Increased opacity for visibility
+//                btn.layer.shadowRadius = 1.5   // Smaller radius for a tighter shadow
+//                btn.layer.shadowOffset = CGSize(width: 0, height: 1.0) // Slight downward offset
+//                btn.layer.shadowPath = UIBezierPath(roundedRect: btn.bounds, cornerRadius: 8).cgPath
                 
                 // SHIFT DISPLAY
                 let display: String
@@ -765,6 +768,21 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
                     display = shiftButtonState == .normal ? key : key.capitalized
                 }
                 btn.setTitle(display, for: .normal)
+//                
+//                // ⭐️ GRADIENT TEXT (ADDED - no logic changed)
+//                let gradientLayer = CAGradientLayer()
+//                gradientLayer.colors = [
+//                    Constants.gradientStartColor.cgColor,
+//                    Constants.gradientEndColor.cgColor
+//                ]
+//                gradientLayer.startPoint = CGPoint(x: 0, y: 0.5)
+//                gradientLayer.endPoint = CGPoint(x: 1, y: 0.5)
+//                gradientLayer.frame = btn.bounds
+//
+//                if let textLayer = btn.titleLabel?.layer {
+//                    gradientLayer.mask = textLayer
+//                    btn.layer.addSublayer(gradientLayer)
+//                }
 
                 // LAYER VALUES
                 btn.layer.setValue(key, forKey: "original")
@@ -835,7 +853,19 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         // If no emoji mode found, just cycle input modes
 //        self.advanceToNextInputMode()
     }
-
+    
+    // For gradients
+//    override func viewDidLayoutSubviews() {
+//        super.viewDidLayoutSubviews()
+//
+//        for btn in keys {
+//            for layer in btn.layer.sublayers ?? [] {
+//                if let gradient = layer as? CAGradientLayer {
+//                    gradient.frame = btn.bounds
+//                }
+//            }
+//        }
+//    }
 	
 	@IBAction func keyPressedTouchUp(_ sender: UIButton) {
         keyPressHaptic.impactOccurred()

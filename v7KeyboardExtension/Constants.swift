@@ -46,6 +46,35 @@ enum Constants {
             return .black
         }
     }
+    static let textFont: UIFont = {
+            let size: CGFloat = 18
+            let baseFont = UIFont.systemFont(ofSize: size)
+            
+            // 1. Get the descriptor and apply the .serif design
+            if let descriptor = baseFont.fontDescriptor.withDesign(.serif) {
+                // 2. Return a new font using the serif descriptor
+                // Passing 0 for size tells UIKit to use the size already defined in the descriptor
+                return UIFont(descriptor: descriptor, size: 0)
+            }
+            
+            return baseFont
+        }()
+    
+//    static let gradientStartColor: UIColor = UIColor { traitCollection in
+//        if traitCollection.userInterfaceStyle == .dark {
+//            return .white
+//        } else {
+//            return .label
+//        }
+//    }
+//
+//    static let gradientEndColor: UIColor = UIColor { traitCollection in
+//        if traitCollection.userInterfaceStyle == .dark {
+//            return .black
+//        } else {
+//            return .secondaryLabel
+//        }
+//    }
     
     static let backgroundColor: UIColor = UIColor { traitCollection in
         if traitCollection.userInterfaceStyle == .dark {
