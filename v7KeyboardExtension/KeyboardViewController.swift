@@ -40,10 +40,10 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
     private func loadModel() {
         autoreleasepool {
             let config = MLModelConfiguration()
-                config.computeUnits = .all
+//                config.computeUnits = .all
 //                    config.computeUnits = .cpuAndNeuralEngine   // avoids GPU memory overhead
             //        config.computeUnits = .cpuOnly
-            //        config.computeUnits = .cpuAndGPU
+                    config.computeUnits = .cpuAndGPU
 //            config.computeUnits = .cpuOnly   // ✅ safest for extensions
             do {
                 let t0 = Date()

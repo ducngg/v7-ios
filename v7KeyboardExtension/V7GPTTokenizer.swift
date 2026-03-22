@@ -155,6 +155,10 @@ class GPTTokenizer {
 
         return array
     }
+    
+    private func isVowel(_ ch: Character) -> Bool {
+        return "aeiouy".contains(ch.lowercased())
+    }
 
     private func isMatch(
         word: String,
@@ -167,15 +171,33 @@ class GPTTokenizer {
             if idx < 1 || idx > 17788 { return false }
             if renumToneMark[idx] != toneMark { return false }
         }
+        
+        var pattern = effectivePattern
+        
+        // 🔹 Special rule: double ending vowel
+        if pattern.count >= 2 {
+            let chars = Array(pattern)
+            let last = chars[chars.count - 1]
+            let secondLast = chars[chars.count - 2]
+
+            if last == secondLast && isVowel(last) {
+                // Enforce shorter word length
+                if word.count != pattern.count - 1 {
+                    return false
+                }
+                // Remove last char from pattern
+                pattern = String(chars.dropLast())
+            }
+        }
 
         // 🔹 Pattern check
         if !effectivePattern.isEmpty {
             // If remove this, effectivePattern="thanh" will still match word="tha"
-            if word.count < effectivePattern.count {
+            if word.count < pattern.count {
                 return false
             }
             
-            let prefixChars = effectivePattern.map { normalizeChar($0) }
+            let prefixChars = pattern.map { normalizeChar($0) }
             for (i, ch) in word.enumerated() {
                 if i >= prefixChars.count { break }
                 if normalizeChar(ch) != prefixChars[i] {
