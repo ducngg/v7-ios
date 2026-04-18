@@ -13,10 +13,11 @@ enum Constants {
     static let haveDD = true // enable "đ"
     static let MAX_SEQUENCE_LEN = 32
     static let VOCAB_SIZE = 21869
+    static let BASE_VIET_VOCAB_SIZE = 17788
     static let MODEL = "v7gpt-2.1-small-20250903-fp16"
     static let DEFAULT_CONTEXT = "vậy" // "bây giờ"
     static let TOP_K = 16
-    static let MAX_FILTER_ITERATE = 3072 // 2048
+    static let MAX_FILTER_ITERATE = 2048 * 2 // 2048
     static let MAX_FILTER_ITERATE_VIET = VOCAB_SIZE // 16384 // For rare words to be always findable
     
     static let EXTRA_SUGGESTION_STEP: Int = 16
@@ -139,7 +140,7 @@ enum Constants {
     // WARNING: For keyboard extensions, this still relies on UITraitCollection.current,
     // which may not always be the correct trait collection. For reliability,
     // consider passing the view's trait collection to a static function.
-    //    static let defaultToneDisplay: String = "♥︎" // for love
+//        static let defaultToneDisplay: String = "♥︎" // for love
         static let defaultToneDisplay: String = "ᯅ" // Apple vision
 //        static let defaultToneDisplay: String = "⎈︎" // Helm - RadialMenu
 //    static var defaultToneDisplay: String {

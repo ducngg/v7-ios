@@ -59,10 +59,10 @@ class GPTTokenizer {
         
         // ---- Build constants once ----
         self.numbers = "0123456789"
-        self.specials = ".,!?;:-_()[]{}'\"“”‘’/\\\\@#$%^&*+=<>~|`…"
+        self.specials = ".,!?;:-_()[]{}'\"“”‘’/\\\\@#$%^&*+=<>~|`… "
         
         let baseVocab = enumData
-            .filter { (_, id) in (1...17788).contains(id) }
+            .filter { (_, id) in (1...Constants.BASE_VIET_VOCAB_SIZE).contains(id) }
             .map { (token, _) in token }
         let charset = Set(baseVocab.joined() + specials)
         let escaped = charset
@@ -168,7 +168,7 @@ class GPTTokenizer {
     ) -> Bool {
         // 🔹 Tone check
         if !toneMark.isEmpty {
-            if idx < 1 || idx > 17788 { return false }
+            if idx < 1 || idx > Constants.BASE_VIET_VOCAB_SIZE { return false }
             if renumToneMark[idx] != toneMark { return false }
         }
         
@@ -234,14 +234,43 @@ class GPTTokenizer {
             currentPattern = String(currentPattern[firstNonSpecialIndex...])
         }
         
+        var effectiveToneMark = toneMark
         var effectivePattern = currentPattern
+        if effectiveToneMark.isEmpty, effectivePattern.count > 1 {
+            let toneMap: [Character: String] = [
+                "s": "◌́",
+                "z": "◌",
+                "f": "◌̀",
+                "j": "◌̣",
+                "x": "◌̃",
+                "r": "◌̉"
+            ]
+
+            var index = effectivePattern.index(after: effectivePattern.startIndex)
+
+            while index < effectivePattern.endIndex {
+                let char = effectivePattern[index]
+
+                if let mappedTone = toneMap[char] {
+                    // 🔥 override toneMark
+                    effectiveToneMark = mappedTone
+
+                    // 🔥 remove that char from pattern
+                    effectivePattern.remove(at: index)
+
+                    break
+                }
+
+                index = effectivePattern.index(after: index)
+            }
+        }
         
         // 🔹 Adjust special consonants
-        if !toneMark.isEmpty, !currentPattern.isEmpty {
-            let firstChar = currentPattern.first!.lowercased()
-            let rest = String(currentPattern.dropFirst())
+        if !effectiveToneMark.isEmpty, !effectivePattern.isEmpty {
+            let firstChar = effectivePattern.first!.lowercased()
+            let rest = String(effectivePattern.dropFirst())
             switch firstChar {
-                case "j": effectivePattern = "ch" + rest
+                case "j": effectivePattern = "tr" + rest // For future telex usage j+r - tr+r
                 case "z": effectivePattern = "gi" + rest
                 case "f": effectivePattern = "ph" + rest
                 default: break
@@ -261,13 +290,13 @@ class GPTTokenizer {
 
         // 🔹 Normal prediction loop
         var iterate = 0
-        let max_iterate = !toneMark.isEmpty ? Constants.MAX_FILTER_ITERATE_VIET : Constants.MAX_FILTER_ITERATE
+        let max_iterate = !effectiveToneMark.isEmpty ? Constants.MAX_FILTER_ITERATE_VIET : Constants.MAX_FILTER_ITERATE
         for idx in predictions {
             iterate += 1
             if iterate > max_iterate { break }
             guard idx < renumList.count else { continue }
             guard let word = renumList[idx] else { continue }
-            if isMatch(word: word, idx: idx, effectivePattern: effectivePattern, toneMark: toneMark) {
+            if isMatch(word: word, idx: idx, effectivePattern: effectivePattern, toneMark: effectiveToneMark) {
                 result.append(word)
                 if result.count >= Constants.TOP_K + extraSuggestion { break }
             }

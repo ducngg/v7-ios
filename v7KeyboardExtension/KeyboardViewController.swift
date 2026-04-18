@@ -30,7 +30,6 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
     var suggestionBar: UIStackView?
 	var keyboardView: UIView!
 	var keys: [UIButton] = []
-	var paddingViews: [UIView] = [UIView]()
 	var backspaceTimer: Timer?
     
     let gptTokenizer = GPTTokenizer()
@@ -41,9 +40,9 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         autoreleasepool {
             let config = MLModelConfiguration()
 //                config.computeUnits = .all
-//                    config.computeUnits = .cpuAndNeuralEngine   // avoids GPU memory overhead
+                    config.computeUnits = .cpuAndNeuralEngine   // avoids GPU memory overhead
             //        config.computeUnits = .cpuOnly
-                    config.computeUnits = .cpuAndGPU
+//                    config.computeUnits = .cpuAndGPU
 //            config.computeUnits = .cpuOnly   // ✅ safest for extensions
             do {
                 let t0 = Date()
@@ -148,14 +147,13 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
 
         proxy = textDocumentProxy as UITextDocumentProxy
 
-        loadInterface()
         loadModel()
+        loadInterface()
         
         let cached = CacheManager.loadCache()
         biasVectorManager = BiasVectorManager(initialVector: cached)
 
         updatePattern()
-        predict()
     }
 
 
@@ -315,10 +313,13 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
             toneMark: currentTone,
             extraSuggestion: currentExtraSuggestion,
         )
-//        let filtered = ["Hello", pattern]
 
         // 🟦 Show only top-k suggestions
         for word in filtered {
+            
+            if [",", "."].contains(word) {
+                continue
+            }
             
             var adjusted = word
             if shiftButtonState == .caps {
@@ -710,11 +711,8 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
 
         // CLEAN OLD VIEWS
         keys.forEach { $0.removeFromSuperview() }
-        paddingViews.forEach { $0.removeFromSuperview() }
-
         keys.removeAll()
-        paddingViews.removeAll()
-
+        
         // SELECT KEYBOARD LAYOUT
         let keyboard: [[String]]
         switch keyboardState {
@@ -732,7 +730,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         // Row-level spacing
         rows.forEach { row in
             row?.isLayoutMarginsRelativeArrangement = true
-            row?.layoutMargins = UIEdgeInsets(top: 2, left: 16, bottom: 2, right: 16)
+            row?.layoutMargins = UIEdgeInsets(top: 2, left: 6, bottom: 2, right: 6)
             row?.spacing = 8
         }
 
@@ -927,12 +925,65 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
 			loadKeys()
             updateSuggestions()
 		}
-	}	
+	}
+    
+    func delChunk() {
+        let context = proxy.documentContextBeforeInput ?? ""
+        guard !context.isEmpty else { return }
+        guard let tokenizer = gptTokenizer else { return }
+
+        let specials = tokenizer.specials
+
+        var deleteCount = 0
+        var index = context.index(before: context.endIndex)
+
+        let lastChar = context[index]
+
+        // 🔥 CASE 1: Last char is special → delete all consecutive SAME specials
+        if specials.contains(lastChar) {
+            deleteCount = 1
+
+            var currentIndex = index
+
+            while currentIndex > context.startIndex {
+                let prevIndex = context.index(before: currentIndex)
+                let prevChar = context[prevIndex]
+
+                // stop if different char OR not special
+                if prevChar != lastChar || !specials.contains(prevChar) {
+                    break
+                }
+
+                deleteCount += 1
+                currentIndex = prevIndex
+            }
+        } else {
+            // 🔥 CASE 2: Delete full token until hitting a special
+            while true {
+                let char = context[index]
+                if specials.contains(char) { break }
+
+                deleteCount += 1
+
+                if index == context.startIndex { break }
+                index = context.index(before: index)
+            }
+        }
+
+        // Apply deletion
+        for _ in 0..<deleteCount {
+            proxy.deleteBackward()
+        }
+
+        self.textDidChange(nil)
+    }
+    
 	
 	@objc func keyLongPressed(_ gesture: UIGestureRecognizer){
 		if gesture.state == .began {
 			backspaceTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { (timer) in
-				self.handleDeleteButtonPressed()
+//				self.handleDeleteButtonPressed()
+                self.delChunk()
 			}
 		} else if gesture.state == .ended || gesture.state == .cancelled {
 			backspaceTimer?.invalidate()
@@ -955,6 +1006,9 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
 	}
     
     func insertTextAndTriggerChange(_ text: String) {
+        if text == "dấu cách" {
+            return
+        }
         proxy.insertText(text)
         self.textDidChange(nil)
     }

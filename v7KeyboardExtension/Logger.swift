@@ -9,6 +9,6 @@ import os
 
 // A global logger for your keyboard extension
 let keyboardLogger = Logger(
-    subsystem: "com.test.v7keyboard.keyboard",
+    subsystem: "com.ducngg.v7.keyboard",
     category: "Keyboard"
 )
