@@ -242,7 +242,7 @@ class ViewController: UIViewController {
         label.numberOfLines = 0
         label.font = .systemFont(ofSize: 13, weight: .medium)
         label.textColor = .secondaryLabel
-        label.text = "v7 version: 1.6.0"
+        label.text = "v7 version: 1.6.1"
         return label
     }
 

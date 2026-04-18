@@ -16,6 +16,24 @@ extension UILabel {
     }
 }
 
+final class KeyContainerView: UIView {
+
+    weak var button: UIButton?
+
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        guard let button = button else { return super.hitTest(point, with: event) }
+
+        // Expand hit area
+        let expandedFrame = button.frame.insetBy(dx: -3, dy: -6)
+
+        if expandedFrame.contains(point) {
+            return button
+        }
+
+        return super.hitTest(point, with: event)
+    }
+}
+
 var proxy : UITextDocumentProxy!
 
 class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
@@ -777,7 +795,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
             for key in rowKeys {
 
                 // 🟩 CONTAINER (NEW)
-                let container = UIView()
+                let container = KeyContainerView()
                 container.clipsToBounds = false
                 
                 // 🔳 SHADOW VIEW (NEW)
@@ -788,6 +806,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
 
                 // 🔘 BUTTON (YOUR ORIGINAL)
                 let btn = UIButton(type: .custom)
+                container.button = btn
                 btn.setTitleColor(Constants.textColor, for: .normal)
                 btn.accessibilityLabel = key // Add this line
 
