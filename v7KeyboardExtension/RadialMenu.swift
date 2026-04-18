@@ -35,7 +35,7 @@ class RadialMenuView: UIView {
         let center = CGPoint(x: bounds.midX, y: bounds.midY)
         let radius = min(bounds.width, bounds.height) / 2
 
-        let font = UIFont.systemFont(ofSize: 16, weight: .medium)
+        let font = UIFont.systemFont(ofSize: 20, weight: .medium)
         let textAttributes: [NSAttributedString.Key: Any] = [
             .foregroundColor: Constants.textColor,
             .font: font

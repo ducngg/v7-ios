@@ -31,7 +31,7 @@ enum Constants {
     static let RADIAL_MENU_MOVEMENT_MAX_THRESHOLD_TO_SHOW: CGFloat = 150.0
     
     static func keyboardHeight(isLandscape: Bool) -> CGFloat {
-        return isLandscape ? 140 : 230
+        return isLandscape ? 140 : 220
     }
     static func suggestionBarHeight(isLandscape: Bool) -> CGFloat {
         return isLandscape ? 30 : 40
@@ -48,7 +48,7 @@ enum Constants {
         }
     }
     static let textFont: UIFont = {
-            let size: CGFloat = 18
+            let size: CGFloat = 19
             let baseFont = UIFont.systemFont(ofSize: size)
             
             // 1. Get the descriptor and apply the .serif design
@@ -90,8 +90,8 @@ enum Constants {
         if traitCollection.userInterfaceStyle == .dark {
             return fakeClear
         } else {
-            return fakeClear
-//            return UIColor(white: 1.0, alpha: 1.0)
+//            return fakeClear
+            return UIColor(white: 1.0, alpha: 0.95)
         }
     }
         
@@ -108,8 +108,21 @@ enum Constants {
         if traitCollection.userInterfaceStyle == .dark {
             return fakeClear
         } else {
+//            return fakeClear
+            return UIColor(
+                red: 170.0/255.0,
+                green: 176.0/255.0,
+                blue: 187.0/255.0,
+                alpha: 0.95
+            )
+        }
+    }
+    
+    static let buttonShadowColor: UIColor = UIColor { traitCollection in
+        if traitCollection.userInterfaceStyle == .dark {
             return fakeClear
-//            return UIColor(white: 0.7, alpha: 1.0)
+        } else {
+            return UIColor.black.withAlphaComponent(0.35)
         }
     }
         
@@ -130,6 +143,18 @@ enum Constants {
         // Accessing the .cgColor property on a dynamic UIColor forces it to resolve
         // based on the *current* trait collection of the context where it is called.
         return dynamicUIColor.cgColor
+    }
+    
+    static func rowMargins(isLandscape: Bool) -> UIEdgeInsets {
+        if isLandscape {
+            return UIEdgeInsets(top: 4, left: 1, bottom: 4, right: 1)
+        } else {
+            return UIEdgeInsets(top: 5, left: 6, bottom: 5, right: 6)
+        }
+    }
+
+    static func rowSpacing(isLandscape: Bool) -> CGFloat {
+        return isLandscape ? 6 : 8
     }
         
     // MARK: - Non-Color Constants

@@ -668,12 +668,19 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
 //		stackView.addArrangedSubview(padding)
 //	}
 	
-    private func applyWidthRules(btn: UIButton, key: String, rowIndex: Int, totalMultiplier: CGFloat) {
+    private func applyWidthRules(
+        container: UIView,
+        btn: UIButton,
+        key: String,
+        rowIndex: Int,
+        totalMultiplier: CGFloat
+    ) {
 
-        let isSpecial = ["⌫", "⏎", "#+=", "ABC", "123", "⇧"].contains(key)
+        let isSpecial = ["⌫", "#+=", "ABC", "123", "⇧", "⏎", "☻"].contains(key)
 
         if isSpecial {
             btn.layer.setValue(true, forKey: "isSpecial")
+
             btn.backgroundColor = key == "⇧" && shiftButtonState != .normal
                 ? Constants.keyPressedColour
                 : Constants.specialKeyNormalColour
@@ -682,16 +689,28 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
                 btn.setTitle("⇪", for: .normal)
             }
 
-            btn.widthAnchor.constraint(
+            let customMultiplier: CGFloat
+            switch key {
+            case "☻": customMultiplier = 1.1
+            case "⌫": customMultiplier = 1.5
+            case "⏎": customMultiplier = 2.6
+            case "123": customMultiplier = 1.3
+            case "ABC": customMultiplier = 1.3
+            case "#+=": customMultiplier = 1.3
+            default: customMultiplier = 1.4
+            }
+
+            container.widthAnchor.constraint(
                 equalTo: stackView1.widthAnchor,
-                multiplier: totalMultiplier * 1.2
+                multiplier: totalMultiplier * customMultiplier
             ).isActive = true
+
             return
         }
 
         // Special wider row for numbers/symbols
-        if (keyboardState == .numbers || keyboardState == .symbols) && rowIndex == 2 {
-            btn.widthAnchor.constraint(
+        if (keyboardState == .numbers || keyboardState == .symbols), rowIndex == 2 {
+            container.widthAnchor.constraint(
                 equalTo: stackView1.widthAnchor,
                 multiplier: totalMultiplier * 1.4
             ).isActive = true
@@ -700,9 +719,9 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
 
         // Normal key
         if key != "dấu cách" {
-            btn.widthAnchor.constraint(
+            container.widthAnchor.constraint(
                 equalTo: stackView1.widthAnchor,
-                multiplier: totalMultiplier
+                multiplier: totalMultiplier * 0.95
             ).isActive = true
         }
     }
@@ -712,6 +731,16 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         // CLEAN OLD VIEWS
         keys.forEach { $0.removeFromSuperview() }
         keys.removeAll()
+        
+        let type = textDocumentProxy.keyboardType
+        switch type {
+        case .numberPad, .decimalPad, .phonePad:
+            self.keyboardState = .numbers
+        case .emailAddress, .twitter, .webSearch:
+            self.keyboardState = .letters
+        default:
+            break
+        }
         
         // SELECT KEYBOARD LAYOUT
         let keyboard: [[String]]
@@ -727,67 +756,90 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
 
         // ADD ROWS + BUTTONS
         let rows = [stackView1, stackView2, stackView3, stackView4]
+        // 🔥 FULL CLEAN RESET (IMPORTANT)
+        rows.forEach { row in
+            row?.arrangedSubviews.forEach {
+                row?.removeArrangedSubview($0)
+                $0.removeFromSuperview()
+            }
+        }
         // Row-level spacing
         rows.forEach { row in
             row?.isLayoutMarginsRelativeArrangement = true
-            row?.layoutMargins = UIEdgeInsets(top: 2, left: 6, bottom: 2, right: 6)
-            row?.spacing = 8
+            row?.layoutMargins = Constants.rowMargins(isLandscape: isLandscape)
+            row?.spacing = Constants.rowSpacing(isLandscape: isLandscape)
         }
-
         for (rowIndex, rowKeys) in keyboard.enumerated() {
             let rowStack = rows[rowIndex]
+            rowStack?.clipsToBounds = false
+            rowStack?.layer.masksToBounds = false
 
             for key in rowKeys {
+
+                // 🟩 CONTAINER (NEW)
+                let container = UIView()
+                container.clipsToBounds = false
+                
+                // 🔳 SHADOW VIEW (NEW)
+                let shadowView = UIView()
+                shadowView.backgroundColor = Constants.buttonShadowColor
+                shadowView.layer.cornerRadius = 6
+                shadowView.translatesAutoresizingMaskIntoConstraints = false
+
+                // 🔘 BUTTON (YOUR ORIGINAL)
                 let btn = UIButton(type: .custom)
                 btn.setTitleColor(Constants.textColor, for: .normal)
+                btn.accessibilityLabel = key // Add this line
+
                 if !Constants.specialKeys.contains(key) {
                     btn.titleLabel?.font = Constants.textFont
                 }
-                
-                btn.layer.cornerRadius = 8
-                btn.clipsToBounds = false
-                
-                btn.accessibilityLabel = key
+
+                btn.layer.cornerRadius = 6
                 btn.clipsToBounds = true
-                btn.backgroundColor = Constants.keyNormalColour  // currently fakeClear
-                
-//                // ⭐️ Bottom shadow
-//                btn.layer.shadowColor = UIColor.black.cgColor
-//                btn.layer.shadowOpacity = 0.35 // Increased opacity for visibility
-//                btn.layer.shadowRadius = 1.5   // Smaller radius for a tighter shadow
-//                btn.layer.shadowOffset = CGSize(width: 0, height: 1.0) // Slight downward offset
-//                btn.layer.shadowPath = UIBezierPath(roundedRect: btn.bounds, cornerRadius: 8).cgPath
-                
-                // SHIFT DISPLAY
+                btn.backgroundColor = Constants.keyNormalColour
+                btn.translatesAutoresizingMaskIntoConstraints = false
+
+                // ADD SUBVIEWS (ORDER MATTERS)
+                container.addSubview(shadowView)
+                container.addSubview(btn)
+
+                // 🧷 CONSTRAINTS (NEW)
+                NSLayoutConstraint.activate([
+                    // Button fills container
+                    btn.topAnchor.constraint(equalTo: container.topAnchor),
+                    btn.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+                    btn.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+                    btn.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+
+                    // Shadow slightly below button
+                    shadowView.topAnchor.constraint(equalTo: btn.topAnchor, constant: 1),
+                    shadowView.leadingAnchor.constraint(equalTo: btn.leadingAnchor),
+                    shadowView.trailingAnchor.constraint(equalTo: btn.trailingAnchor),
+                    shadowView.bottomAnchor.constraint(equalTo: btn.bottomAnchor, constant: 1),
+                ])
+
+                // SHIFT DISPLAY (UNCHANGED)
                 let display: String
                 if key == "dấu cách" {
-                    display = key // always normal
+                    display = key
                 } else {
                     display = shiftButtonState == .normal ? key : key.capitalized
                 }
                 btn.setTitle(display, for: .normal)
-//                
-//                // ⭐️ GRADIENT TEXT (ADDED - no logic changed)
-//                let gradientLayer = CAGradientLayer()
-//                gradientLayer.colors = [
-//                    Constants.gradientStartColor.cgColor,
-//                    Constants.gradientEndColor.cgColor
-//                ]
-//                gradientLayer.startPoint = CGPoint(x: 0, y: 0.5)
-//                gradientLayer.endPoint = CGPoint(x: 1, y: 0.5)
-//                gradientLayer.frame = btn.bounds
-//
-//                if let textLayer = btn.titleLabel?.layer {
-//                    gradientLayer.mask = textLayer
-//                    btn.layer.addSublayer(gradientLayer)
-//                }
+                btn.titleEdgeInsets = UIEdgeInsets(
+                    top: -1,
+                    left: 0,
+                    bottom: 1,
+                    right: 0
+                )
 
-                // LAYER VALUES
+                // LAYER VALUES (UNCHANGED)
                 btn.layer.setValue(key, forKey: "original")
                 btn.layer.setValue(display, forKey: "keyToDisplay")
                 btn.layer.setValue(false, forKey: "isSpecial")
 
-                // GESTURES (YOUR LOGIC UNTOUCHED)
+                // GESTURES (UNCHANGED)
                 if Constants.allowedRadialKeys.contains(key.lowercased()) {
                     btn.addGestureRecognizer(UIPanGestureRecognizer(
                         target: self, action: #selector(handleKeyPan(_:))
@@ -806,11 +858,16 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
                 btn.addTarget(self, action: #selector(keyUntouched), for: .touchDragExit)
                 btn.addTarget(self, action: #selector(keyMultiPress(_:event:)), for: .touchDownRepeat)
 
-                rowStack?.addArrangedSubview(btn)
+                // ✅ IMPORTANT: add container, not button
+                rowStack?.addArrangedSubview(container)
+//                container.layoutMargins = UIEdgeInsets(top: -4, left: -4, bottom: -4, right: -4)
+
+                // Keep your keys array intact
                 keys.append(btn)
 
-                // WIDTH RULES
+                // WIDTH RULES (APPLY TO CONTAINER NOW)
                 applyWidthRules(
+                    container: container,
                     btn: btn,
                     key: key,
                     rowIndex: rowIndex,

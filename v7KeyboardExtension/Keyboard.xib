@@ -28,7 +28,7 @@
                     <subviews>
                         <button hidden="YES" opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="bhs-eZ-P76">
                             <rect key="frame" x="0.0" y="0.0" width="10" height="30"/>
-                            <color key="backgroundColor" red="0.27957927890000001" green="1" blue="0.31969719260000001" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                            <color key="backgroundColor" red="0.27957927890000001" green="1" blue="0.31969719260000001" alpha="0" colorSpace="custom" customColorSpace="sRGB"/>
                             <constraints>
                                 <constraint firstAttribute="width" constant="10" id="vny-lv-2OK"/>
                             </constraints>
@@ -36,7 +36,7 @@
                         </button>
                         <button hidden="YES" opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Rsv-pg-SbL">
                             <rect key="frame" x="0.0" y="0.0" width="0.0" height="30"/>
-                            <color key="backgroundColor" red="0.92473093930000005" green="1" blue="0.18106735900000001" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                            <color key="backgroundColor" red="0.92473093930000005" green="1" blue="0.18106735900000001" alpha="0" colorSpace="custom" customColorSpace="sRGB"/>
                             <state key="normal" title="b"/>
                         </button>
                     </subviews>
