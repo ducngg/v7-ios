@@ -203,6 +203,8 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         let container = UIStackView()
         container.axis = .horizontal
         container.translatesAutoresizingMaskIntoConstraints = false
+        container.isLayoutMarginsRelativeArrangement = true
+        container.layoutMargins = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 12)
         container.backgroundColor = .clear
         
         view.addSubview(container)
@@ -602,9 +604,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
                 insertTextAndTriggerChange(term)
                 
                 // 🔹 Reset key color when menu dismissed
-                if let isSpecial = keyButton.layer.value(forKey: "isSpecial") as? Bool {
-                    keyButton.backgroundColor = isSpecial ? Constants.specialKeyNormalColour : Constants.keyNormalColour
-                }
+                resetButtonBackgroundColor(btn: keyButton)
                 return
             }
 
@@ -645,9 +645,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
             }
 
             // Reset key color
-            if let isSpecial = keyButton.layer.value(forKey: "isSpecial") as? Bool {
-                keyButton.backgroundColor = isSpecial ? Constants.specialKeyNormalColour : Constants.keyNormalColour
-            }
+            resetButtonBackgroundColor(btn: keyButton)
 
         default:
             break
@@ -697,6 +695,17 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
 //		view.addSubview(keyboardView)
 //        loadKeys()
 //	}
+    
+    private func resetButtonBackgroundColor(
+        btn: UIButton
+    ) {
+        guard let originalKey = btn.layer.value(forKey: "original") as? String else {return}
+        guard let isSpecial = btn.layer.value(forKey: "isSpecial") as? Bool else {return}
+        btn.backgroundColor = isSpecial ? Constants.specialKeyNormalColour : Constants.keyNormalColour
+        if originalKey == Constants.SPACE {
+            btn.backgroundColor = Constants.spaceKeyNormalColour
+        }
+    }
 	
     private func applyWidthRules(
         container: UIView,
@@ -710,7 +719,6 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
 
         if isSpecial {
             btn.layer.setValue(true, forKey: "isSpecial")
-
             btn.backgroundColor = key == "⇧" && shiftButtonState != .normal
                 ? Constants.keyPressedColour
                 : Constants.specialKeyNormalColour
@@ -831,7 +839,6 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
 
                 btn.layer.cornerRadius = 6
                 btn.clipsToBounds = true
-                btn.backgroundColor = Constants.keyNormalColour
                 btn.translatesAutoresizingMaskIntoConstraints = false
 
                 // ADD SUBVIEWS (ORDER MATTERS)
@@ -872,6 +879,8 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
                 btn.layer.setValue(key, forKey: "original")
                 btn.layer.setValue(display, forKey: "keyToDisplay")
                 btn.layer.setValue(false, forKey: "isSpecial")
+                
+                resetButtonBackgroundColor(btn: btn)
 
                 // GESTURES (UNCHANGED)
                 if Constants.allowedRadialKeys.contains(key.lowercased()) {
@@ -959,9 +968,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
 	@IBAction func keyPressedTouchUp(_ sender: UIButton) {
         keyPressHaptic.impactOccurred()
 		guard let originalKey = sender.layer.value(forKey: "original") as? String, let keyToDisplay = sender.layer.value(forKey: "keyToDisplay") as? String else {return}
-		
-		guard let isSpecial = sender.layer.value(forKey: "isSpecial") as? Bool else {return}
-		sender.backgroundColor = isSpecial ? Constants.specialKeyNormalColour : Constants.keyNormalColour
+        resetButtonBackgroundColor(btn: sender)
 
 		switch originalKey {
             case "⌫":
@@ -1079,13 +1086,12 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
 		} else if gesture.state == .ended || gesture.state == .cancelled {
 			backspaceTimer?.invalidate()
 			backspaceTimer = nil
-			(gesture.view as! UIButton).backgroundColor = Constants.specialKeyNormalColour
+            resetButtonBackgroundColor(btn: gesture.view as! UIButton)
 		}
 	}
 	
 	@objc func keyUntouched(_ sender: UIButton){
-		guard let isSpecial = sender.layer.value(forKey: "isSpecial") as? Bool else {return}
-		sender.backgroundColor = isSpecial ? Constants.specialKeyNormalColour : Constants.keyNormalColour
+        resetButtonBackgroundColor(btn: sender)
 	}
 	
 	@objc func keyTouchDown(_ sender: UIButton){

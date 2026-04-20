@@ -9,5 +9,5 @@
 // Configuration settings file format documentation can be found at:
 // https://developer.apple.com/documentation/xcode/adding-a-build-configuration-file-to-your-project
 
-MARKETING_VERSION = 1.6.2
-CURRENT_PROJECT_VERSION = 5
+MARKETING_VERSION = 1.6.3
+CURRENT_PROJECT_VERSION = 1
