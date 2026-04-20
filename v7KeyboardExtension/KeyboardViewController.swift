@@ -9,13 +9,6 @@
 import UIKit
 import CoreML
 
-extension UILabel {
-    func padding(left: CGFloat, right: CGFloat, top: CGFloat, bottom: CGFloat) {
-        let insets = UIEdgeInsets(top: top, left: left, bottom: bottom, right: right)
-        drawText(in: bounds.inset(by: insets))
-    }
-}
-
 final class KeyContainerView: UIView {
 
     weak var button: UIButton?
@@ -78,7 +71,8 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
     var toneInfoLabel: UILabel?
     var currentTone: String = "" {
         didSet {
-            toneInfoLabel?.text = currentTone.isEmpty ? Constants.defaultToneDisplay : currentTone
+            toneInfoLabel?.text = currentTone.isEmpty ? Constants.defaultToneLabelDisplay(keyboardFont: keyboardFont) : currentTone
+            toneInfoLabel?.font = Constants.textFont(keyboardFont: keyboardFont, size: 16)
         }
     }
     func resetCurrentTone() {
@@ -101,8 +95,9 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
 		case caps
 	}
 	
+    var keyboardFont: Int = 1
 	var keyboardState: KeyboardState = .letters
-	var shiftButtonState:ShiftButtonState = .normal
+	var shiftButtonState: ShiftButtonState = .normal
     var hasEnteredRadialMenu = false
     private var panStartPoint: CGPoint?   // Store where the gesture began
 	
@@ -188,6 +183,17 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
 //    func updateNextKeyboardVisibility() {
 //        self.nextKeyboardButton.isHidden = !self.needsInputModeSwitchKey
 //    }
+    
+    @objc func didTapToneInfoLabel() {
+        keyboardFont += 1
+
+        if keyboardFont >= Constants.NUMBER_OF_KEYBOARD_FONTS {
+            keyboardFont = 0
+        }
+        toneInfoLabel?.text = currentTone.isEmpty ? Constants.defaultToneLabelDisplay(keyboardFont: keyboardFont) : currentTone
+        toneInfoLabel!.font = Constants.textFont(keyboardFont: keyboardFont, size: 16)
+        loadKeys()
+    }
 
     func loadSuggestionBar() {
         if suggestionBar != nil {
@@ -221,14 +227,31 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
 //        ])
 
         // 🔹 Fixed info label
+        let infoLabelWrapper = UIView()
+
         let infoLabel = UILabel()
-        infoLabel.text = Constants.defaultToneDisplay
+        infoLabel.text = Constants.defaultToneLabelDisplay(keyboardFont: keyboardFont)
+        infoLabel.font = Constants.textFont(keyboardFont: keyboardFont, size: 16)
         infoLabel.textAlignment = .center
-        infoLabel.font = UIFont.systemFont(ofSize: 16, weight: .medium)
-        infoLabel.widthAnchor.constraint(equalToConstant: 40).isActive = true
         infoLabel.textColor = Constants.textColor
         infoLabel.backgroundColor = Constants.backgroundColor
-        container.addArrangedSubview(infoLabel)
+        infoLabel.isUserInteractionEnabled = true
+
+        let tap = UITapGestureRecognizer(target: self, action: #selector(didTapToneInfoLabel))
+        infoLabel.addGestureRecognizer(tap)
+
+        infoLabelWrapper.addSubview(infoLabel)
+        infoLabel.translatesAutoresizingMaskIntoConstraints = false
+
+        NSLayoutConstraint.activate([
+            infoLabel.leadingAnchor.constraint(equalTo: infoLabelWrapper.leadingAnchor, constant: 8), // 👈 left padding
+            infoLabel.trailingAnchor.constraint(equalTo: infoLabelWrapper.trailingAnchor),
+            infoLabel.topAnchor.constraint(equalTo: infoLabelWrapper.topAnchor),
+            infoLabel.bottomAnchor.constraint(equalTo: infoLabelWrapper.bottomAnchor),
+            infoLabelWrapper.widthAnchor.constraint(equalToConstant: 48) // 30 + padding
+        ])
+
+        container.addArrangedSubview(infoLabelWrapper)
         self.toneInfoLabel = infoLabel
 
         // 🔹 Scroll view for suggestions
@@ -333,6 +356,8 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         )
 
         // 🟦 Show only top-k suggestions
+        var isFirst = true
+
         for word in filtered {
             
             if [",", "."].contains(word) {
@@ -341,25 +366,31 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
             
             var adjusted = word
             if shiftButtonState == .caps {
-                // 🔹 Capitalize whole word
                 adjusted = word.uppercased()
             } else if shiftButtonState == .shift || (!pattern.isEmpty && pattern.first!.isUppercase) {
-                // 🔹 Capitalize only first letter
                 adjusted = word.prefix(1).uppercased() + word.dropFirst()
             }
-        
+
             let button = UIButton(type: .system)
             button.setTitle(adjusted, for: .normal)
             button.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .regular)
             button.setTitleColor(Constants.textColor, for: .normal)
-            button.backgroundColor = .clear
             button.layer.cornerRadius = 6
             button.addTarget(self, action: #selector(didTapSuggestion(_:)), for: .touchUpInside)
             button.contentEdgeInsets = UIEdgeInsets(top: 6, left: 12, bottom: 6, right: 12)
+
+            // 🔥 Highlight first valid suggestion
+            if isFirst {
+                if pattern != "" {
+                    button.backgroundColor = Constants.keyPressedColour
+                }
+                isFirst = false
+            } else {
+                button.backgroundColor = .clear
+            }
+
             suggestionBar?.addArrangedSubview(button)
         }
-
-        suggestionBar?.invalidateIntrinsicContentSize()
     }
 
     // Keep the @objc exposed version for button taps
@@ -626,7 +657,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
 
     func showRadialMenu(at center: CGPoint, for key: String) {
         if radialMenu == nil {
-            if key == "dấu cách" { // spacebar
+            if key == Constants.SPACE {
                 radialMenu = RadialMenuView(frame: CGRect(x: 0, y: 0, width: 80, height: 80),
                                             items: [".", ","])
             } else {
@@ -665,25 +696,6 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
 //        setupSuggestionBar()
 //		view.addSubview(keyboardView)
 //        loadKeys()
-//	}
-	
-//	func addPadding(to stackView: UIStackView, width: CGFloat, key: String){
-//		let padding = UIButton(frame: CGRect(x: 0, y: 0, width: 5, height: 5))
-//		padding.setTitleColor(.clear, for: .normal)
-//		padding.alpha = 0.02
-//		padding.widthAnchor.constraint(equalToConstant: width).isActive = true
-//		
-//		//if we want to use this padding as a key, for example the a and l buttons
-//		let keyToDisplay = shiftButtonState == .normal ? key : key.capitalized
-//		padding.layer.setValue(key, forKey: "original")
-//		padding.layer.setValue(keyToDisplay, forKey: "keyToDisplay")
-//		padding.layer.setValue(false, forKey: "isSpecial")
-//		padding.addTarget(self, action: #selector(keyPressedTouchUp), for: .touchUpInside)
-//		padding.addTarget(self, action: #selector(keyTouchDown), for: .touchDown)
-//		padding.addTarget(self, action: #selector(keyUntouched), for: .touchDragExit)
-//		
-//		paddingViews.append(padding)
-//		stackView.addArrangedSubview(padding)
 //	}
 	
     private func applyWidthRules(
@@ -736,7 +748,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         }
 
         // Normal key
-        if key != "dấu cách" {
+        if key != Constants.SPACE {
             container.widthAnchor.constraint(
                 equalTo: stackView1.widthAnchor,
                 multiplier: totalMultiplier * 0.95
@@ -811,7 +823,10 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
                 btn.accessibilityLabel = key // Add this line
 
                 if !Constants.specialKeys.contains(key) {
-                    btn.titleLabel?.font = Constants.textFont
+                    btn.titleLabel?.font = Constants.textFont(keyboardFont: keyboardFont)
+                }
+                if key == Constants.SPACE {
+                    btn.titleLabel?.font = Constants.textFont(keyboardFont: keyboardFont, size: 14)
                 }
 
                 btn.layer.cornerRadius = 6
@@ -840,7 +855,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
 
                 // SHIFT DISPLAY (UNCHANGED)
                 let display: String
-                if key == "dấu cách" {
+                if key == Constants.SPACE {
                     display = key
                 } else {
                     display = shiftButtonState == .normal ? key : key.capitalized
@@ -957,7 +972,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
                 handleDeleteButtonPressed()
                 resetCurrentTone()
 
-            case "dấu cách":
+            case Constants.SPACE:
                 insertTextAndTriggerChange(" ")
                 resetCurrentTone()
 
@@ -1082,7 +1097,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
 	}
     
     func insertTextAndTriggerChange(_ text: String) {
-        if text == "dấu cách" {
+        if text == Constants.SPACE {
             return
         }
         proxy.insertText(text)

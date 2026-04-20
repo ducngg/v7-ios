@@ -7,6 +7,12 @@
 
 import UIKit
 
+#if DEBUG
+let env = "Staging"
+#else
+let env = "Release"
+#endif
+
 class ViewController: UIViewController {
 	@IBOutlet weak var instructions: UITextView!
 	@IBOutlet weak var dismissKeyboardButton: UIButton!
@@ -241,8 +247,12 @@ class ViewController: UIViewController {
         let label = UILabel()
         label.numberOfLines = 0
         label.font = .systemFont(ofSize: 13, weight: .medium)
-        label.textColor = .secondaryLabel
-        label.text = "v7 version: 1.6.1"
+        label.textColor = .black
+
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?"
+
+        label.text = "v7 version: \(version) (\(build)) - \(env)"
         return label
     }
 

@@ -74,6 +74,8 @@
 		89195C792E5F5F3600DEBD52 /* renum_21869.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = renum_21869.json; sourceTree = "<group>"; };
 		89195C7F2E61ABF900DEBD52 /* Logger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logger.swift; sourceTree = "<group>"; };
 		893DB00C2DCBD78B00747C34 /* renum_crt.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = renum_crt.json; sourceTree = "<group>"; };
+		896C77C62F94EAA800D439CE /* Config.Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.Release.xcconfig; sourceTree = "<group>"; };
+		896C77C72F94EB0E00D439CE /* Config.Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.Debug.xcconfig; sourceTree = "<group>"; };
 		8994578B2E08335300B2DBEF /* V7GPTTokenizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = V7GPTTokenizer.swift; sourceTree = "<group>"; };
 		89E049772E7067F80098D94C /* CacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CacheManager.swift; sourceTree = "<group>"; };
 		89E049792E706C6F0098D94C /* Model.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Model.swift; sourceTree = "<group>"; };
@@ -103,6 +105,8 @@
 		38BD212722D5907E00C6795D = {
 			isa = PBXGroup;
 			children = (
+				896C77C62F94EAA800D439CE /* Config.Release.xcconfig */,
+				896C77C72F94EB0E00D439CE /* Config.Debug.xcconfig */,
 				38BD213222D5907F00C6795D /* v7Keyboard */,
 				38BD214D22D592CA00C6795D /* v7KeyboardExtension */,
 				38BD213122D5907E00C6795D /* Products */,
@@ -315,6 +319,7 @@
 /* Begin XCBuildConfiguration section */
 		38BD214322D5908100C6795D /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 896C77C72F94EB0E00D439CE /* Config.Debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -347,7 +352,6 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 0.0.1;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 3RGBSXCM2J;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -382,6 +386,7 @@
 		};
 		38BD214422D5908100C6795D /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 896C77C62F94EAA800D439CE /* Config.Release.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -414,7 +419,6 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 0.0.1;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 3RGBSXCM2J;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -447,7 +451,6 @@
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1.6.1;
 				DEVELOPMENT_TEAM = 3RGBSXCM2J;
 				INFOPLIST_FILE = "$(SRCROOT)/v7Keyboard/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "v7 Keyboard";
@@ -456,7 +459,6 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.6.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ducngg.v7;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
@@ -470,7 +472,6 @@
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1.6.1;
 				DEVELOPMENT_TEAM = 3RGBSXCM2J;
 				INFOPLIST_FILE = "$(SRCROOT)/v7Keyboard/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "v7 Keyboard";
@@ -479,7 +480,6 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.6.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ducngg.v7;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
@@ -492,7 +492,6 @@
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1.6.1;
 				DEVELOPMENT_TEAM = 3RGBSXCM2J;
 				ENABLE_ON_DEMAND_RESOURCES = NO;
 				INFOPLIST_FILE = "$(SRCROOT)/v7KeyboardExtension/Info.plist";
@@ -504,7 +503,6 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.6.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ducngg.v7.keyboard;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -518,7 +516,6 @@
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1.6.1;
 				DEVELOPMENT_TEAM = 3RGBSXCM2J;
 				ENABLE_ON_DEMAND_RESOURCES = NO;
 				INFOPLIST_FILE = "$(SRCROOT)/v7KeyboardExtension/Info.plist";
@@ -530,7 +527,6 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.6.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ducngg.v7.keyboard;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;

@@ -15,7 +15,11 @@ enum Constants {
     static let VOCAB_SIZE = 21869
     static let BASE_VIET_VOCAB_SIZE = 17788
     static let MODEL = "v7gpt-2.1-small-20250903-fp16"
-    static let DEFAULT_CONTEXT = "vậy" // "bây giờ"
+    static let DEFAULT_CONTEXT = "vậy"
+//    static let DEFAULT_CONTEXT = "bây giờ"
+//    static let DEFAULT_CONTEXT = "ok"
+    static let SPACE = "\t"
+
     static let TOP_K = 16
     static let MAX_FILTER_ITERATE = 2048 * 2 // 2048
     static let MAX_FILTER_ITERATE_VIET = VOCAB_SIZE // 16384 // For rare words to be always findable
@@ -36,6 +40,8 @@ enum Constants {
     static func suggestionBarHeight(isLandscape: Bool) -> CGFloat {
         return isLandscape ? 30 : 40
     }
+    
+    static let NUMBER_OF_KEYBOARD_FONTS: Int = 2
 
     static let fakeClear: UIColor = UIColor(white: 0.01, alpha: 0.01) // If using clear then very hard to press button
     // Using UIColor(dynamicProvider:) allows the color to automatically resolve
@@ -47,19 +53,35 @@ enum Constants {
             return .black
         }
     }
-    static let textFont: UIFont = {
-            let size: CGFloat = 19
-            let baseFont = UIFont.systemFont(ofSize: size)
-            
-            // 1. Get the descriptor and apply the .serif design
+    static func textFont(keyboardFont: Int, size: CGFloat = 20) -> UIFont {
+        let baseFont = UIFont.systemFont(ofSize: size)
+
+        switch keyboardFont {
+        case 1:
+            // Serif version
             if let descriptor = baseFont.fontDescriptor.withDesign(.serif) {
-                // 2. Return a new font using the serif descriptor
-                // Passing 0 for size tells UIKit to use the size already defined in the descriptor
                 return UIFont(descriptor: descriptor, size: 0)
             }
-            
             return baseFont
-        }()
+
+        case 0:
+            fallthrough
+        default:
+            // Default system font
+            return baseFont
+        }
+    }
+    
+    static func defaultToneLabelDisplay(keyboardFont: Int) -> String {
+        switch keyboardFont {
+        case 1:
+            return "Ω"
+        case 0:
+            fallthrough
+        default:
+            return "ᯅ"
+        }
+    }
     
 //    static let gradientStartColor: UIColor = UIColor { traitCollection in
 //        if traitCollection.userInterfaceStyle == .dark {
@@ -182,25 +204,25 @@ enum Constants {
 		["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],
 		["a", "s", "d", "đ", "f", "g", "h", "j", "k", "l"],
 		["⇧", "z", "x", "c", "v", "b", "n", "m", "⌫"],
-		["123", "☻", "dấu cách", "⏎"]
+		["123", "☻", SPACE, "⏎"]
     ] : [
         ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],
         ["a", "s", "d", "f", "g", "h", "j", "k", "l"],
         ["⇧", "z", "x", "c", "v", "b", "n", "m", "⌫"],
-        ["123", "☻", "dấu cách", "⏎"]
+        ["123", "☻", SPACE, "⏎"]
     ]
 	static let numberKeys = [
 		["1", "2", "3", "4", "5", "6", "7", "8", "9", "0",],
 		["-", "/", ":", ";", "(", ")" , "$", "&", "@", "\""],
 		["#+=",".", ",", "?", "!", "\'", "⌫"],
-		["ABC", "☻", "dấu cách", "⏎"]
+		["ABC", "☻", SPACE, "⏎"]
 	]
 	
 	static let symbolKeys = [
 		["[", "]", "{", "}", "#", "%", "^", "*", "+", "="],
 		["_", "\\", "|", "~", "<", ">", "€", "£", "¥", "đ"],
 		["123","·", ",", "?", "!", "\'", "⌫"],
-		["ABC", "☻", "dấu cách", "⏎"]
+		["ABC", "☻", SPACE, "⏎"]
 	]
     static let specialKeys = ["⇧", "⌫", "#+=", "☻", "⏎"]
     
@@ -223,7 +245,7 @@ enum Constants {
     
     static let allowedRadialKeys: Set<String> = {
         var keys = Set((97...122).map { String(UnicodeScalar($0)! ) }) // a–z
-        keys.insert("dấu cách") // dấu cách
+        keys.insert(SPACE)
         keys.insert("đ")
         return keys
     }()
