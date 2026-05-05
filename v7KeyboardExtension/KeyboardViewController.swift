@@ -41,38 +41,20 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
     var suggestionBar: UIStackView?
 	var keyboardView: UIView!
 	var keys: [UIButton] = []
+    var xpace: UIButton?
+    var xenter: UIButton?
 	var backspaceTimer: Timer?
     
     let gptTokenizer = GPTTokenizer()
-    var biasVectorManager: BiasVectorManager?
-
-    var model: v7gpt_2_2_small_20250909_with_bias?
-    private func loadModel() {
-        autoreleasepool {
-            let config = MLModelConfiguration()
-//                config.computeUnits = .all
-                    config.computeUnits = .cpuAndNeuralEngine   // avoids GPU memory overhead
-            //        config.computeUnits = .cpuOnly
-//                    config.computeUnits = .cpuAndGPU
-//            config.computeUnits = .cpuOnly   // ✅ safest for extensions
-            do {
-                let t0 = Date()
-                model = try v7gpt_2_2_small_20250909_with_bias(configuration: config)
-                keyboardLogger.debug("✅ Model loaded in \(Date().timeIntervalSince(t0))s")
-            } catch {
-                keyboardLogger.error("⚠️ Failed to load model: \(error.localizedDescription)")
-            }
-        }
-    }
+    var cooker: Cooker?
     
-    let defaultContext: String = Constants.DEFAULT_CONTEXT
     var lastRawContextWithoutPattern: String?
     var lastInputArray: MLMultiArray?
     var toneInfoLabel: UILabel?
     var currentTone: String = "" {
         didSet {
-            toneInfoLabel?.text = currentTone.isEmpty ? Constants.defaultToneLabelDisplay(keyboardFont: keyboardFont) : currentTone
-            toneInfoLabel?.font = Constants.textFont(keyboardFont: keyboardFont, size: 16)
+            toneInfoLabel?.text = currentTone.isEmpty ? Constants.defaultToneLabelDisplay(uiCode: uiCodeState) : currentTone
+            toneInfoLabel?.font = Constants.textFont(uiCode: uiCodeState, size: 16)
         }
     }
     func resetCurrentTone() {
@@ -95,7 +77,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
 		case caps
 	}
 	
-    var keyboardFont: Int = 1
+    var uiCodeState: Int = 0
 	var keyboardState: KeyboardState = .letters
 	var shiftButtonState: ShiftButtonState = .normal
     var hasEnteredRadialMenu = false
@@ -159,13 +141,12 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         keyPressHaptic.prepare()
 
         proxy = textDocumentProxy as UITextDocumentProxy
-
-        loadModel()
-        loadInterface()
         
-        let cached = CacheManager.loadCache()
-        biasVectorManager = BiasVectorManager(initialVector: cached)
+        uiCodeState = CacheManager.loadUICodeState()
 
+        cooker = Cooker()
+        
+        loadInterface()
         updatePattern()
     }
 
@@ -185,13 +166,21 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
 //    }
     
     @objc func didTapToneInfoLabel() {
-        keyboardFont += 1
+        uiCodeState += 1
 
-        if keyboardFont >= Constants.NUMBER_OF_KEYBOARD_FONTS {
-            keyboardFont = 0
+        if uiCodeState >= Constants.NUMBER_OF_UI_CODES {
+            uiCodeState = 0
         }
-        toneInfoLabel?.text = currentTone.isEmpty ? Constants.defaultToneLabelDisplay(keyboardFont: keyboardFont) : currentTone
-        toneInfoLabel!.font = Constants.textFont(keyboardFont: keyboardFont, size: 16)
+        
+        // Persist state
+        CacheManager.saveUICodeState(uiCodeState)
+        
+        toneInfoLabel?.text = currentTone.isEmpty
+            ? Constants.defaultToneLabelDisplay(uiCode: uiCodeState)
+            : currentTone
+        
+        toneInfoLabel!.font = Constants.textFont(uiCode: uiCodeState, size: 16)
+        
         loadKeys()
     }
 
@@ -232,8 +221,8 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         let infoLabelWrapper = UIView()
 
         let infoLabel = UILabel()
-        infoLabel.text = Constants.defaultToneLabelDisplay(keyboardFont: keyboardFont)
-        infoLabel.font = Constants.textFont(keyboardFont: keyboardFont, size: 16)
+        infoLabel.text = Constants.defaultToneLabelDisplay(uiCode: uiCodeState)
+        infoLabel.font = Constants.textFont(uiCode: uiCodeState, size: 16)
         infoLabel.textAlignment = .center
         infoLabel.textColor = Constants.textColor
         infoLabel.backgroundColor = Constants.backgroundColor
@@ -341,37 +330,51 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         updateSuggestions()
         
     }
-
-
+    
+    private func adjustCase(for word: String) -> String {
+        if shiftButtonState == .caps {
+            return word.uppercased()
+        } else if shiftButtonState == .shift || (!pattern.isEmpty && pattern.first!.isUppercase) {
+            return word.prefix(1).uppercased() + word.dropFirst()
+        }
+        return word
+    }
+    
     func updateSuggestions() {
         // Clear previous buttons
         suggestionBar?.arrangedSubviews.forEach { $0.removeFromSuperview() }
 
         guard let tokenizer = self.gptTokenizer else { return }
 
-        // 🟦 Filter predictions based on pattern + tone
-        let filtered = tokenizer.filter(
+        var filtered = tokenizer.filter(
             pattern: pattern,
             predictions: currentPrediction,
             toneMark: currentTone,
-            extraSuggestion: currentExtraSuggestion,
+            extraSuggestion: currentExtraSuggestion
         )
+        
+        filtered = filtered.filter { ![",", "."].contains($0) }
 
-        // 🟦 Show only top-k suggestions
-        var isFirst = true
+        // 🚀 Logic for XPACE (The Spacebar)
+        // Only show prediction if the user has actually started typing (pattern is not empty)
+        if let firstWord = filtered.first, !pattern.isEmpty && uiCodeState == Constants.OMEGA_UI_CODE {
+            let adjustedFirst = adjustCase(for: firstWord)
+            xpace?.setTitle(adjustedFirst, for: .normal)
+            
+            // Show the text-only highlight pill
+            let highlightPill = xpace?.superview?.viewWithTag(99)
+            highlightPill?.isHidden = false
+            
+            xenter?.setTitle(Constants.XENTER, for: .normal)
+        } else {
+            // Default back to "Space" if no pattern is active
+            xpace?.setTitle(Constants.SPACE, for: .normal)
+            xpace?.superview?.viewWithTag(99)?.isHidden = true
+        }
 
-        for word in filtered {
-            
-            if [",", "."].contains(word) {
-                continue
-            }
-            
-            var adjusted = word
-            if shiftButtonState == .caps {
-                adjusted = word.uppercased()
-            } else if shiftButtonState == .shift || (!pattern.isEmpty && pattern.first!.isUppercase) {
-                adjusted = word.prefix(1).uppercased() + word.dropFirst()
-            }
+        // 🟦 Show ALL suggestions in the bar (including the first one)
+        for (index, word) in filtered.enumerated() {
+            let adjusted = adjustCase(for: word)
 
             let button = UIButton(type: .system)
             button.setTitle(adjusted, for: .normal)
@@ -381,12 +384,9 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
             button.addTarget(self, action: #selector(didTapSuggestion(_:)), for: .touchUpInside)
             button.contentEdgeInsets = UIEdgeInsets(top: 6, left: 12, bottom: 6, right: 12)
 
-            // 🔥 Highlight first valid suggestion
-            if isFirst {
-                if pattern != "" {
-                    button.backgroundColor = Constants.keyPressedColour
-                }
-                isFirst = false
+            // Highlight the first item in the suggestion bar if pattern exists
+            if index == 0 && !pattern.isEmpty {
+                button.backgroundColor = Constants.keyPressedColour
             } else {
                 button.backgroundColor = .clear
             }
@@ -394,7 +394,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
             suggestionBar?.addArrangedSubview(button)
         }
     }
-
+    
     // Keep the @objc exposed version for button taps
     @objc func didTapSuggestion(_ sender: UIButton) {
         didTapSuggestion(sender, fromRadialMenu: false)
@@ -433,26 +433,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         }
         
         // 🔸 Update cache
-        guard let tokenizer = self.gptTokenizer else {
-            keyboardLogger.debug("❌ gptTokenizer is nil")
-            return
-        }
-        guard let biasVectorManager = self.biasVectorManager else {
-            keyboardLogger.debug("❌ biasVectorManager is nil")
-            return
-        }
-        if let index = tokenizer.enumDict[word.lowercased()] {
-            // Update bias vector
-            biasVectorManager.updateBiasVector(at: index)
-
-            // Save updated vector to cache
-            CacheManager.saveCache(biasVectorManager.biasVector)
-
-            keyboardLogger.debug("✅ Updated bias for '\(word)' at index \(index)")
-        } else {
-            keyboardLogger.debug("⚠️ Token not found for '\(word)'")
-        }
-
+        cooker?.updateBias(with: word)
     }
     func emitTopPrediction() {
         guard let firstButton = suggestionBar?.arrangedSubviews.first as? UIButton else { return }
@@ -472,9 +453,12 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
             let terms = context.split(separator: " ").map(String.init)
             pattern = terms.last ?? ""
         }
+        if pattern == "" {
+            xenter?.setTitle(Constants.ENTER, for: .normal)
+        }
     }
 
-    func predict() {
+    func llm_predict() {
         // Full cleaned input
         let fullInput = (proxy.documentContextBeforeInput ?? "")
             .replacingOccurrences(of: "\n", with: " ")
@@ -500,19 +484,18 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         
         keyboardLogger.debug("full=[\(fullInput, privacy: .public)] rawContextWithoutPattern=[\(rawContextWithoutPattern, privacy: .public)] ")
 
-        guard let tokenizer = self.gptTokenizer else {
-            keyboardLogger.debug("❌ gptTokenizer is nil")
+        guard let cooker = self.cooker else {
+            keyboardLogger.debug("❌ cooker is nil")
             return
         }
-        guard let biasVectorManager = self.biasVectorManager else {
-            keyboardLogger.debug("❌ biasVectorManager is nil")
+        guard let tokenizer = cooker.tokenizer else {
+            keyboardLogger.debug("❌ tokenizer is nil")
             return
         }
         
         var inputArray = tokenizer.tokenize(text: rawContextWithoutPattern)
-
         if inputArray.count == 0 || rawContextWithoutPattern.trimmingCharacters(in: .whitespaces).isEmpty {
-            inputArray = tokenizer.tokenize(text: self.defaultContext)
+            inputArray = tokenizer.tokenize(text: Constants.DEFAULT_CONTEXT)
         }
 
         if tokenizer.isSameInput(inputArray, lastInputArray) {
@@ -523,17 +506,11 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         
         keyboardLogger.debug("preding")
         DispatchQueue.global(qos: .userInitiated).async {
-            guard let model = self.model else {
-                keyboardLogger.error("Model is nil")
-                return
-            }
-
             let start = DispatchTime.now()
 
-            if let predictions = model_predict(
-                model: model,
+            if let predictions = cooker.llm_predict(
                 input: inputArray,
-                biasVector: biasVectorManager.biasVector,
+                biasVector: cooker.biasVectorManager?.biasVector ?? [],
                 alpha: Constants.BIAS_ALPHA,
                 temperature: Constants.TEMPERATURE,
             ) {
@@ -769,6 +746,8 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         // CLEAN OLD VIEWS
         keys.forEach { $0.removeFromSuperview() }
         keys.removeAll()
+        xpace = nil // Reset reference
+        xenter = nil
         
         let type = textDocumentProxy.keyboardType
         switch type {
@@ -831,10 +810,10 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
                 btn.accessibilityLabel = key // Add this line
 
                 if !Constants.specialKeys.contains(key) {
-                    btn.titleLabel?.font = Constants.textFont(keyboardFont: keyboardFont)
+                    btn.titleLabel?.font = Constants.textFont(uiCode: uiCodeState)
                 }
                 if key == Constants.SPACE {
-                    btn.titleLabel?.font = Constants.textFont(keyboardFont: keyboardFont, size: 14)
+                    btn.titleLabel?.font = UIFont.systemFont(ofSize: 18, weight: .regular)
                 }
 
                 btn.layer.cornerRadius = 6
@@ -843,6 +822,34 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
 
                 // ADD SUBVIEWS (ORDER MATTERS)
                 container.addSubview(shadowView)
+                
+                // 🔥 XPACE HIGHLIGHT LOGIC
+                if key == Constants.SPACE {
+                    self.xpace = btn
+                    
+                    // Create a "Pill" view that sits behind the text
+                    let highlightPill = UIView()
+                    highlightPill.backgroundColor = Constants.keyPressedColour
+                    highlightPill.layer.cornerRadius = 4
+                    highlightPill.isUserInteractionEnabled = false
+                    highlightPill.translatesAutoresizingMaskIntoConstraints = false
+                    highlightPill.tag = 99
+                    highlightPill.isHidden = true // Hidden by default
+                    
+                    container.addSubview(highlightPill)
+                    
+                    NSLayoutConstraint.activate([
+                        highlightPill.centerXAnchor.constraint(equalTo: container.centerXAnchor),
+                        highlightPill.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+                        // Make the pill slightly larger than expected text bounds
+                        highlightPill.heightAnchor.constraint(equalToConstant: 28),
+                        highlightPill.widthAnchor.constraint(greaterThanOrEqualToConstant: 70)
+                    ])
+                }
+                if key == Constants.ENTER {
+                    self.xenter = btn
+                }
+    
                 container.addSubview(btn)
 
                 // 🧷 CONSTRAINTS (NEW)
@@ -920,7 +927,6 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         }
     }
 
-		
 	func changeKeyboardToNumberKeys(){
 		keyboardState = .numbers
 		shiftButtonState = .normal
@@ -951,6 +957,46 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         // If no emoji mode found, just cycle input modes
 //        self.advanceToNextInputMode()
     }
+    func handleXpace() {
+        guard let xpaceButton = self.xpace else {
+            // Fallback if xpace isn't initialized
+            insertTextAndTriggerChange(" ")
+            return
+        }
+
+        let currentTitle = xpaceButton.title(for: .normal)
+
+        // If the title is NOT the default space constant, it's a prediction
+        if currentTitle != Constants.SPACE && currentTitle != "" {
+            emitTopPrediction()
+        } else {
+            // Standard spacebar behavior
+            insertTextAndTriggerChange(" ")
+            resetCurrentTone()
+        }
+    }
+    func handleXenter() {
+        guard let xenterButton = self.xenter else {
+            insertTextAndTriggerChange("\n")
+            return
+        }
+
+        let currentTitle = xenterButton.title(for: .normal)
+
+        // If the button is in "XENTER" mode, clean up and commit
+        if currentTitle == Constants.XENTER {
+            // 1. Reset xpace to standard space
+            xpace?.setTitle(Constants.SPACE, for: .normal)
+            xpace?.superview?.viewWithTag(99)?.isHidden = true
+            
+            // 2. Reset xenter back to the return icon/text
+            xenterButton.setTitle(Constants.ENTER, for: .normal)
+            
+        } else {
+            // Standard Enter behavior
+            insertTextAndTriggerChange("\n")
+        }
+    }
     
     // For gradients
 //    override func viewDidLayoutSubviews() {
@@ -980,17 +1026,10 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
                 resetCurrentTone()
 
             case Constants.SPACE:
-                insertTextAndTriggerChange(" ")
-                resetCurrentTone()
+                handleXpace()
 
-            case "⏎":
-//                if !pattern.isEmpty { // Maybe not so convenient
-//                    emitTopPrediction()
-//                } else {
-//                    insertTextAndTriggerChange("\n")
-//                }
-                insertTextAndTriggerChange("\n")
-
+            case Constants.ENTER:
+                handleXenter()
 
             case "123":
                 changeKeyboardToNumberKeys()
@@ -1120,6 +1159,6 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
 		// The app has just changed the document's contents, the document context has been updated.
         currentExtraSuggestion = 0
         self.updatePattern()
-        self.predict()
+        self.llm_predict()
     }
 }

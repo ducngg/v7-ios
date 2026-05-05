@@ -17,8 +17,14 @@ enum Constants {
     static let MODEL = "v7gpt-2.1-small-20250903-fp16"
     static let DEFAULT_CONTEXT = "vậy"
 //    static let DEFAULT_CONTEXT = "bây giờ"
-//    static let DEFAULT_CONTEXT = "ok"
-    static let SPACE = "\t"
+
+    static let SPACE = "  "
+    static let ENTER = "⏎"
+    static let XENTER = "␣"
+    
+    static let ALPHA_UI_CODE = 0
+    static let OMEGA_UI_CODE = 1
+    static let NUMBER_OF_UI_CODES: Int = 2
 
     static let TOP_K = 16
     static let MAX_FILTER_ITERATE = 2048 * 2 // 2048
@@ -40,8 +46,6 @@ enum Constants {
     static func suggestionBarHeight(isLandscape: Bool) -> CGFloat {
         return isLandscape ? 30 : 40
     }
-    
-    static let NUMBER_OF_KEYBOARD_FONTS: Int = 2
 
     static let fakeClear: UIColor = UIColor(white: 0.01, alpha: 0.01) // If using clear then very hard to press button
     // Using UIColor(dynamicProvider:) allows the color to automatically resolve
@@ -53,18 +57,18 @@ enum Constants {
             return .black
         }
     }
-    static func textFont(keyboardFont: Int, size: CGFloat = 20) -> UIFont {
+    static func textFont(uiCode: Int, size: CGFloat = 20) -> UIFont {
         let baseFont = UIFont.systemFont(ofSize: size)
 
-        switch keyboardFont {
-        case 1:
+        switch uiCode {
+        case OMEGA_UI_CODE:
             // Serif version
             if let descriptor = baseFont.fontDescriptor.withDesign(.serif) {
                 return UIFont(descriptor: descriptor, size: 0)
             }
             return baseFont
 
-        case 0:
+        case ALPHA_UI_CODE:
             fallthrough
         default:
             // Default system font
@@ -72,11 +76,11 @@ enum Constants {
         }
     }
     
-    static func defaultToneLabelDisplay(keyboardFont: Int) -> String {
-        switch keyboardFont {
-        case 1:
+    static func defaultToneLabelDisplay(uiCode: Int) -> String {
+        switch uiCode {
+        case OMEGA_UI_CODE:
             return "Ω"
-        case 0:
+        case ALPHA_UI_CODE:
             fallthrough
         default:
             return "ᯅ"
@@ -114,6 +118,15 @@ enum Constants {
         } else {
 //            return fakeClear
             return UIColor(white: 1.0, alpha: 0.95)
+        }
+    }
+    
+    static let spaceKeyNormalColour: UIColor = UIColor { traitCollection in
+        if traitCollection.userInterfaceStyle == .dark {
+            return fakeClear
+        } else {
+//            return fakeClear
+            return keyNormalColour
         }
     }
         
@@ -204,27 +217,27 @@ enum Constants {
 		["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],
 		["a", "s", "d", "đ", "f", "g", "h", "j", "k", "l"],
 		["⇧", "z", "x", "c", "v", "b", "n", "m", "⌫"],
-		["123", "☻", SPACE, "⏎"]
+		["123", "☻", SPACE, ENTER]
     ] : [
         ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],
         ["a", "s", "d", "f", "g", "h", "j", "k", "l"],
         ["⇧", "z", "x", "c", "v", "b", "n", "m", "⌫"],
-        ["123", "☻", SPACE, "⏎"]
+        ["123", "☻", SPACE, ENTER]
     ]
 	static let numberKeys = [
 		["1", "2", "3", "4", "5", "6", "7", "8", "9", "0",],
 		["-", "/", ":", ";", "(", ")" , "$", "&", "@", "\""],
 		["#+=",".", ",", "?", "!", "\'", "⌫"],
-		["ABC", "☻", SPACE, "⏎"]
+		["ABC", "☻", SPACE, ENTER]
 	]
 	
 	static let symbolKeys = [
 		["[", "]", "{", "}", "#", "%", "^", "*", "+", "="],
 		["_", "\\", "|", "~", "<", ">", "€", "£", "¥", "đ"],
 		["123","·", ",", "?", "!", "\'", "⌫"],
-		["ABC", "☻", SPACE, "⏎"]
+		["ABC", "☻", SPACE, ENTER]
 	]
-    static let specialKeys = ["⇧", "⌫", "#+=", "☻", "⏎"]
+    static let specialKeys = ["⇧", "⌫", "#+=", "☻", ENTER]
     
     static let modalParticles = [
         "nhé", "nha", "nhe", "nhá",
