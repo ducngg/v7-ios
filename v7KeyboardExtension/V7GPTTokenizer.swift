@@ -161,9 +161,9 @@ class GPTTokenizer {
     }
 
     private func isMatch(
+        effectivePattern: String,
         word: String,
         idx: Int,
-        effectivePattern: String,
         toneMark: String
     ) -> Bool {
         // 🔹 Tone check
@@ -211,10 +211,11 @@ class GPTTokenizer {
 
     func filter(
         pattern: String,
-        predictions: [Int],
+        predictions: [(id: Int, score: Float)],
         toneMark: String,
         extraSuggestion: Int
     ) -> [String] {
+        let predictionIds = predictions.map { $0.id }
         var result: [String] = []
         var currentPattern = pattern
         
@@ -291,18 +292,56 @@ class GPTTokenizer {
         // 🔹 Normal prediction loop
         var iterate = 0
         let max_iterate = !effectiveToneMark.isEmpty ? Constants.MAX_FILTER_ITERATE_VIET : Constants.MAX_FILTER_ITERATE
-        for idx in predictions {
+        for idx in predictionIds {
             iterate += 1
             if iterate > max_iterate { break }
             guard idx < renumList.count else { continue }
             guard let word = renumList[idx] else { continue }
-            if isMatch(word: word, idx: idx, effectivePattern: effectivePattern, toneMark: effectiveToneMark) {
+            if isMatch(effectivePattern: effectivePattern, word: word, idx: idx, toneMark: effectiveToneMark) {
                 result.append(word)
                 if result.count >= Constants.TOP_K + extraSuggestion { break }
             }
         }
 
         return result
+    }
+    
+    /// Validates if an N-Gram entry matches the current sequence of signals typed by the user.
+    /// - Parameters:
+    ///   - tornSignals: The signals extracted from the pattern (e.g., ["h", "p"] from "h p")
+    ///   - ngram: The full text from the SQLite entry (e.g., "học phí")
+    ///   - tokens: The token IDs for that phrase (e.g., [120, 450])
+    /// - Returns: Bool indicating if the N-Gram is a valid suggestion for the input
+    func isMatchNgram(
+        tornSignals: [String],
+        ngram: String,
+        tokens: [Int]
+    ) -> Bool {
+        // 1. Split the N-Gram text into individual words
+        // We use lowercased to match your tokenizer's normalization
+        let ngramWords = ngram.lowercased().split(separator: " ").map(String.init)
+        
+        // 2. Safety check: If the user typed more parts than the N-Gram has words, it's not a match.
+        // e.g., pattern "a b c" cannot match N-Gram "apple banana"
+        guard tornSignals.count <= ngramWords.count else {
+            return false
+        }
+        
+        // 3. Validate each signal against the corresponding word in the N-Gram
+        for i in 0..<tornSignals.count {
+            let signal = tornSignals[i]
+            let word = ngramWords[i]
+            
+            // We call your existing isMatch logic.
+            // We pass empty toneMark as requested.
+            // idx is usually used for position-based logic in tokenizers.
+            if !isMatch(effectivePattern: signal, word: word, idx: i, toneMark: "") {
+                return false
+            }
+        }
+        
+        // If all signals passed the check, this N-Gram is a valid match
+        return true
     }
     
     func isSameInput(_ a: MLMultiArray?, _ b: MLMultiArray?) -> Bool {
@@ -328,7 +367,7 @@ class GPTTokenizer {
         guard let data = try? Data(contentsOf: url) else { return nil }
         return try? JSONSerialization.jsonObject(with: data, options: [])
     }
-    private func normalizeChar(_ char: Character) -> Character {
+    func normalizeChar(_ char: Character) -> Character {
         switch char {
         case "đ":
             return Constants.haveDD ? "đ" : "d"
@@ -347,5 +386,41 @@ class GPTTokenizer {
         default:
             return char
         }
+    }
+    
+    func signalTearer(signals: String) -> [String] {
+        var parts: [String] = []
+        let chars = Array(signals)
+        var pos = 0
+        let n = chars.count
+
+        while pos < n {
+            var lastValidEnd: Int? = nil
+
+            var end = pos + 1
+            while end <= n {
+                let sub = String(chars[pos..<end])
+                let range = NSRange(location: 0, length: sub.utf16.count)
+
+                if let match = caytreRegex.firstMatch(in: sub, options: [], range: range),
+                   match.range == range {
+                    lastValidEnd = end
+                } else if lastValidEnd != nil {
+                    break
+                }
+
+                end += 1
+            }
+
+            if let validEnd = lastValidEnd {
+                parts.append(String(chars[pos..<validEnd]))
+                pos = validEnd
+            } else {
+                parts.append(String(chars[pos]))
+                pos += 1
+            }
+        }
+
+        return parts
     }
 }

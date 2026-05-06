@@ -45,7 +45,6 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
     var xenter: UIButton?
 	var backspaceTimer: Timer?
     
-    let gptTokenizer = GPTTokenizer()
     var cooker: Cooker?
     
     var lastRawContextWithoutPattern: String?
@@ -61,7 +60,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         currentTone = ""
     }
 
-    var currentPrediction: [Int] = []
+    var currentPrediction: [(id: Int, score: Float)] = []
     var currentExtraSuggestion: Int = 0
     var pattern: String = ""
 
@@ -300,6 +299,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         keyboardView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(keyboardView)
         
+        // TODO: Might need to add very top constraints
         NSLayoutConstraint.activate([
             keyboardView.topAnchor.constraint(equalTo: suggestionBar?.bottomAnchor ?? view.topAnchor),
             keyboardView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
@@ -344,17 +344,17 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         // Clear previous buttons
         suggestionBar?.arrangedSubviews.forEach { $0.removeFromSuperview() }
 
-        guard let tokenizer = self.gptTokenizer else { return }
-
-        var filtered = tokenizer.filter(
-            pattern: pattern,
+        guard let cooker = self.cooker else {
+            keyboardLogger.debug("❌ cooker is nil")
+            return
+        }
+        let filtered = cooker.cookSuggestions(
+            signals: pattern,
             predictions: currentPrediction,
             toneMark: currentTone,
             extraSuggestion: currentExtraSuggestion
         )
         
-        filtered = filtered.filter { ![",", "."].contains($0) }
-
         // 🚀 Logic for XPACE (The Spacebar)
         // Only show prediction if the user has actually started typing (pattern is not empty)
         if let firstWord = filtered.first, !pattern.isEmpty && uiCodeState == Constants.OMEGA_UI_CODE {
@@ -404,7 +404,8 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         
         // 🔸 Delete current pattern AND // 🔸 Insert selected word + space
         // 🔹 Find first index from right that is a special
-        if let lastSpecialIndex = pattern.lastIndex(where: { gptTokenizer!.specials.contains($0) }) {
+        
+        if let lastSpecialIndex = pattern.lastIndex(where: { cooker!.tokenizer!.specials.contains($0) }) {
             let deleteCount = pattern.distance(from: lastSpecialIndex, to: pattern.endIndex) - 1
             for _ in 0..<deleteCount {
                 proxy.deleteBackward()
@@ -663,15 +664,6 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         radialMenu?.removeFromSuperview()
         radialMenu = nil
     }
-
-	
-//	func loadInterface(){
-//		let keyboardNib = UINib(nibName: "Keyboard", bundle: nil)
-//		keyboardView = keyboardNib.instantiate(withOwner: self, options: nil)[0] as? UIView
-//        setupSuggestionBar()
-//		view.addSubview(keyboardView)
-//        loadKeys()
-//	}
     
     private func resetButtonBackgroundColor(
         btn: UIButton
@@ -1067,7 +1059,14 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
     func delChunk() {
         let context = proxy.documentContextBeforeInput ?? ""
         guard !context.isEmpty else { return }
-        guard let tokenizer = gptTokenizer else { return }
+        guard let cooker = self.cooker else {
+            keyboardLogger.debug("❌ cooker is nil")
+            return
+        }
+        guard let tokenizer = cooker.tokenizer else {
+            keyboardLogger.debug("❌ tokenizer is nil")
+            return
+        }
 
         let specials = tokenizer.specials
 
