@@ -60,7 +60,8 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         currentTone = ""
     }
 
-    var currentPrediction: [(id: Int, score: Float)] = []
+    var currentPrediction: PredictionResult = (candidates: [], scores: [])
+    
     var currentExtraSuggestion: Int = 0
     var pattern: String = ""
 

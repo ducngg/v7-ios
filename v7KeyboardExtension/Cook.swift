@@ -11,21 +11,42 @@ import CoreML
 import SQLite3
 
 typealias NGramEntryWithTokens = (text: String, score: Int, tokens: [Int])
-
+typealias PredictionResult = (candidates: [Int], scores: [Float])
 class NGramDatabase {
-    var db: OpaquePointer?
+    private var db: OpaquePointer?
+    
+    // 🔥 The Cache
+    private var lastQueryKey: String = ""
+    private var cachedResults: [NGramEntryWithTokens] = []
 
     init() {
-        let path = Bundle.main.path(forResource: "v7ngram-1.0-20260504.234lookup", ofType: "sqlite")!
-        if sqlite3_open(path, &db) != SQLITE_OK {
+        guard let path = Bundle.main.path(forResource: Constants.NGRAM_PATH, ofType: "sqlite") else {
+            print("Database file not found")
+            return
+        }
+
+        if sqlite3_open_v2(path, &db, SQLITE_OPEN_READONLY, nil) != SQLITE_OK {
             print("Error opening database")
         }
+
+        sqlite3_exec(db, "PRAGMA cache_size = -64;", nil, nil, nil)
+        sqlite3_exec(db, "PRAGMA temp_store = FILE;", nil, nil, nil)
     }
 
     func queryWithTokens(key: String) -> [NGramEntryWithTokens] {
+        // 1. Check if we already have this key in the cache
+        if key == lastQueryKey {
+            return cachedResults
+        }
+        // 2. Query
         var statement: OpaquePointer?
-        let query = "SELECT text, score, tokens FROM ngrams WHERE key = ? ORDER BY score DESC"
-        
+        let query = """
+        SELECT text, score, tokens
+        FROM ngrams
+        WHERE key = ?
+        ORDER BY score DESC
+        LIMIT \(Constants.NGRAM_LIMIT_QUERY)
+        """
         var results: [NGramEntryWithTokens] = []
 
         if sqlite3_prepare_v2(db, query, -1, &statement, nil) == SQLITE_OK {
@@ -35,16 +56,36 @@ class NGramDatabase {
                 let text = String(cString: sqlite3_column_text(statement, 0))
                 let score = Int(sqlite3_column_int(statement, 1))
                 
-                // 🔥 Decode the JSON string back to [Int]
-                let tokensString = String(cString: sqlite3_column_text(statement, 2))
-                if let data = tokensString.data(using: .utf8),
-                   let tokenArray = try? JSONDecoder().decode([Int].self, from: data) {
-                    results.append((text: text, score: score, tokens: tokenArray))
+                var tokenArray: [Int] = []
+                if let blob = sqlite3_column_blob(statement, 2) {
+                    let blobSize = Int(sqlite3_column_bytes(statement, 2))
+                    let count = blobSize / MemoryLayout<UInt16>.size
+                    let typedPointer = blob.bindMemory(to: UInt16.self, capacity: count)
+                    let buffer = UnsafeBufferPointer(start: typedPointer, count: count)
+                    tokenArray = buffer.map { Int($0) }
                 }
+
+                results.append((text: text, score: score, tokens: tokenArray))
             }
         }
+        
         sqlite3_finalize(statement)
+
+        // 3. Save to cache for next time
+        self.lastQueryKey = key
+        self.cachedResults = results
+        
         return results
+    }
+
+    // Call this if the keyboard is dismissed or memory is low
+    func clearCache() {
+        lastQueryKey = ""
+        cachedResults = []
+    }
+
+    deinit {
+        sqlite3_close(db)
     }
 }
 
@@ -114,7 +155,7 @@ final class Cooker {
         biasVector: [Float],
         alpha: Float,
         temperature: Float
-    ) -> [(id: Int, score: Float)]? {
+    ) -> PredictionResult? {
         guard let model = self.LLM else { return nil }
 
         do {
@@ -123,6 +164,7 @@ final class Cooker {
                   let temperatureArray = makeMLMultiArray(from: temperature) else {
                 return nil
             }
+
             let output = try model.prediction(
                 input_token_ids: input,
                 bias_vector: biasArray,
@@ -130,20 +172,18 @@ final class Cooker {
                 temperature: temperatureArray
             )
 
-            // 1. Convert Int32 scalars to standard Swift Ints
-            let sortedIDs = output.ranked_desc_token_idsShapedArray.scalars.map { Int($0) }
+            // 1. Get sorted IDs (Candidates)
+            // Convert [Int32] to [Int]
+            let candidates = output.ranked_desc_token_idsShapedArray.scalars.map { Int($0) }
             
-            // 2. Access the probability ShapedArray
+            // 2. Get the corresponding scores (Probabilities)
+            // Note: probsArray[scalarAt:] is fast, but we map it into a clean [Float] array
             let probsArray = output.final_probsShapedArray
-
-            // 3. Map IDs to their specific scores
-            let rankedWithScores: [(id: Int, score: Float)] = sortedIDs.map { id in
-                // Use scalarAt to get the Float directly, avoiding NSNumber
-                let score: Float = probsArray[scalarAt: id]
-                return (id: id, score: score)
+            let scores = candidates.map { id in
+                Float(probsArray[scalarAt: id])
             }
 
-            return rankedWithScores
+            return (candidates: candidates, scores: scores)
 
         } catch {
             keyboardLogger.error("Prediction error: \(error.localizedDescription)")
@@ -152,31 +192,46 @@ final class Cooker {
     }
     
     // MARK: - Bias Update
-
-    func updateBias(with word: String) {
+    func updateBias(with phrase: String) {
         guard let tokenizer = self.tokenizer else {
             keyboardLogger.debug("❌ tokenizer is nil")
             return
         }
+
         guard let biasVectorManager = self.biasVectorManager else {
             keyboardLogger.debug("❌ biasVectorManager is nil")
             return
         }
 
-        let lower = word.lowercased()
+        // Split by whitespace/newlines
+        let words = phrase
+            .lowercased()
+            .split(whereSeparator: \.isWhitespace)
 
-        guard let index = tokenizer.enumDict[lower] else {
-            keyboardLogger.debug("⚠️ Token not found for '\(word)'")
-            return
+        var updatedCount = 0
+
+        for wordSubstr in words {
+            let word = String(wordSubstr)
+
+            guard let index = tokenizer.enumDict[word] else {
+                keyboardLogger.debug("⚠️ Token not found for '\(word)'")
+                continue
+            }
+
+            biasVectorManager.updateBiasVector(at: index)
+            updatedCount += 1
+
+            keyboardLogger.debug("✅ Updated bias for '\(word)' at index \(index)")
         }
 
-        // Update bias
-        biasVectorManager.updateBiasVector(at: index)
+        // Save once
+        if updatedCount > 0 {
+            CacheManager.saveBiasVectorWeights(
+                biasVectorManager.biasVector
+            )
 
-        // Persist
-        CacheManager.saveBiasVectorWeights(biasVectorManager.biasVector)
-
-        keyboardLogger.debug("✅ Updated bias for '\(word)' at index \(index)")
+            keyboardLogger.debug("💾 Saved bias vector (\(updatedCount) updates)")
+        }
     }
     
     private func buildKey(from signals: [String]) -> String {
@@ -187,9 +242,47 @@ final class Cooker {
         return String(chars)
     }
     
+    private func sortNgramCandidates(
+        candidates: [NGramEntryWithTokens],
+        predictions: PredictionResult
+    ) -> [NGramEntryWithTokens] {
+
+        // O(1) token score lookup
+        var scoreMap: [Int: Float] = [:]
+        scoreMap.reserveCapacity(predictions.candidates.count)
+
+        for (index, id) in predictions.candidates.enumerated() {
+            scoreMap[id] = predictions.scores[index]
+        }
+
+        // Precompute summed score once
+        let scoredCandidates = candidates.map { candidate in
+            let predictionScore = candidate.tokens.reduce(Float(0)) {
+                $0 + (scoreMap[$1] ?? 0)
+            }
+
+            return (
+                candidate: candidate,
+                predictionScore: predictionScore
+            )
+        }
+
+        // Sort cached scores
+        return scoredCandidates
+            .sorted { a, b in
+
+                if a.predictionScore == b.predictionScore {
+                    return a.candidate.score > b.candidate.score
+                }
+
+                return a.predictionScore > b.predictionScore
+            }
+            .map(\.candidate)
+    }
+    
     func cookSuggestions(
         signals: String,
-        predictions: [(id: Int, score: Float)],
+        predictions: PredictionResult,
         toneMark: String,
         extraSuggestion: Int
     ) -> [String] {
@@ -203,23 +296,21 @@ final class Cooker {
 
         filteredLLM = filteredLLM.filter { ![",", "."].contains($0) }
 
-        // 2. 🔥 Query and Filter SQLite N-Grams
+        // 2. 🔥 Query SQLite N-Grams
         let lowerSignals = signals.lowercased()
         let tornSignals = tokenizer?.signalTearer(signals: lowerSignals) ?? []
         let key = buildKey(from: tornSignals)
 
-        // Fetch candidates from SQLite
-        let ngramCandidates = ngramDB.queryWithTokens(key: key)
+        var ngramCandidates = ngramDB.queryWithTokens(key: key)
 
-        // Apply the custom matching logic with Early Stopping
+        // NEW: Sort candidates by LLM token probability before matching
+        ngramCandidates = sortNgramCandidates(candidates: ngramCandidates, predictions: predictions)
+
+        // Apply matching with Early Stopping
         var validNgrams: [String] = []
         for candidate in ngramCandidates {
-            // Check if we've reached our limit
-            if validNgrams.count >= Constants.TOP_K {
-                break
-            }
+            if validNgrams.count >= Constants.NGRAM_TOP_K { break }
             
-            // Perform the heavy matching logic only until TOP_K is filled
             if tokenizer!.isMatchNgram(
                 tornSignals: tornSignals,
                 ngram: candidate.text,

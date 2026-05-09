@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 54;
+	objectVersion = 50;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -31,7 +31,7 @@
 		89E248CE2E6D486F00D66417 /* RadialMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89E248CD2E6D486700D66417 /* RadialMenu.swift */; };
 		89EFF4B62FAB709A007F63E4 /* CayTre.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89EFF4B52FAB7097007F63E4 /* CayTre.swift */; };
 		89EFF4C12FAB97FA007F63E4 /* v7gpt-2.2-small-20250909-with_bias-with_final_probs.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 89EFF4C02FAB97FA007F63E4 /* v7gpt-2.2-small-20250909-with_bias-with_final_probs.mlpackage */; };
-		89EFF4C52FABA89E007F63E4 /* v7ngram-1.0-20260504.234lookup.sqlite in Resources */ = {isa = PBXBuildFile; fileRef = 89EFF4C42FABA89E007F63E4 /* v7ngram-1.0-20260504.234lookup.sqlite */; };
+		89EFF4CB2FAFC362007F63E4 /* v7ngram-2.0-20260510.[234]lookup.sqlite in Resources */ = {isa = PBXBuildFile; fileRef = 89EFF4CA2FAFC362007F63E4 /* v7ngram-2.0-20260510.[234]lookup.sqlite */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -85,7 +85,7 @@
 		89E248CD2E6D486700D66417 /* RadialMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadialMenu.swift; sourceTree = "<group>"; };
 		89EFF4B52FAB7097007F63E4 /* CayTre.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CayTre.swift; sourceTree = "<group>"; };
 		89EFF4C02FAB97FA007F63E4 /* v7gpt-2.2-small-20250909-with_bias-with_final_probs.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = "v7gpt-2.2-small-20250909-with_bias-with_final_probs.mlpackage"; sourceTree = "<group>"; };
-		89EFF4C42FABA89E007F63E4 /* v7ngram-1.0-20260504.234lookup.sqlite */ = {isa = PBXFileReference; lastKnownFileType = file; path = "v7ngram-1.0-20260504.234lookup.sqlite"; sourceTree = "<group>"; };
+		89EFF4CA2FAFC362007F63E4 /* v7ngram-2.0-20260510.[234]lookup.sqlite */ = {isa = PBXFileReference; lastKnownFileType = file; path = "v7ngram-2.0-20260510.[234]lookup.sqlite"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -143,13 +143,13 @@
 			isa = PBXGroup;
 			children = (
 				89195C782E5F5F3600DEBD52 /* enum_21869.json */,
-				89EFF4C42FABA89E007F63E4 /* v7ngram-1.0-20260504.234lookup.sqlite */,
 				89195C792E5F5F3600DEBD52 /* renum_21869.json */,
 				893DB00C2DCBD78B00747C34 /* renum_crt.json */,
 				8994578B2E08335300B2DBEF /* V7GPTTokenizer.swift */,
 				38BD214E22D592CA00C6795D /* KeyboardViewController.swift */,
 				89ADADD72FAA5062002BFA81 /* Cook.swift */,
 				89EFF4B52FAB7097007F63E4 /* CayTre.swift */,
+				89EFF4CA2FAFC362007F63E4 /* v7ngram-2.0-20260510.[234]lookup.sqlite */,
 				89E0497D2E70952C0098D94C /* BiasVectorManager.swift */,
 				89E049772E7067F80098D94C /* CacheManager.swift */,
 				89E248CD2E6D486700D66417 /* RadialMenu.swift */,
@@ -259,9 +259,9 @@
 			files = (
 				893DB00D2DCBD78B00747C34 /* renum_crt.json in Resources */,
 				89195C7A2E5F5F3600DEBD52 /* renum_21869.json in Resources */,
+				89EFF4CB2FAFC362007F63E4 /* v7ngram-2.0-20260510.[234]lookup.sqlite in Resources */,
 				89195C7B2E5F5F3600DEBD52 /* enum_21869.json in Resources */,
 				38BD215922D5935A00C6795D /* Keyboard.xib in Resources */,
-				89EFF4C52FABA89E007F63E4 /* v7ngram-1.0-20260504.234lookup.sqlite in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

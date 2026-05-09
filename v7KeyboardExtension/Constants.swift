@@ -14,7 +14,10 @@ enum Constants {
     static let MAX_SEQUENCE_LEN = 32
     static let VOCAB_SIZE = 21869
     static let BASE_VIET_VOCAB_SIZE = 17788
-    static let MODEL = "v7gpt-2.1-small-20250903-fp16"
+    
+    static let LLM_PATH = "v7gpt_2_2_small_20250909_with_bias_with_final_probs"
+    static let NGRAM_PATH = "v7ngram-2.0-20260510.[234]lookup"
+    
     static let DEFAULT_CONTEXT = "vậy"
 //    static let DEFAULT_CONTEXT = "bây giờ"
 
@@ -26,9 +29,12 @@ enum Constants {
     static let OMEGA_UI_CODE = 1
     static let NUMBER_OF_UI_CODES: Int = 2
 
-    static let TOP_K = 16
+    static let LLM_TOP_K = 16
     static let MAX_FILTER_ITERATE = 2048 * 2 // 2048
     static let MAX_FILTER_ITERATE_VIET = VOCAB_SIZE // 16384 // For rare words to be always findable
+    
+    static let NGRAM_LIMIT_QUERY = 3000
+    static let NGRAM_TOP_K = 16
     
     static let EXTRA_SUGGESTION_STEP: Int = 16
     static let EXTRA_SUGGESTION_MAX: Int = 64
@@ -57,7 +63,7 @@ enum Constants {
             return .black
         }
     }
-    static func textFont(uiCode: Int, size: CGFloat = 20) -> UIFont {
+    static func textFont(uiCode: Int, size: CGFloat = 21) -> UIFont {
         let baseFont = UIFont.systemFont(ofSize: size)
 
         switch uiCode {
@@ -233,8 +239,8 @@ enum Constants {
 	
 	static let symbolKeys = [
 		["[", "]", "{", "}", "#", "%", "^", "*", "+", "="],
-		["_", "\\", "|", "~", "<", ">", "€", "£", "¥", "đ"],
-		["123","·", ",", "?", "!", "\'", "⌫"],
+		["_", "\\", "|", "~", "<", ">", "€", "£", "¥", "₫"],
+		["123","·", ",", "?", "!", "`", "⌫"],
 		["ABC", "☻", SPACE, ENTER]
 	]
     static let specialKeys = ["⇧", "⌫", "#+=", "☻", ENTER]
