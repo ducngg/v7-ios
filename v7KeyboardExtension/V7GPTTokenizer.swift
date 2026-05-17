@@ -327,10 +327,19 @@ class GPTTokenizer {
             return false
         }
         
+        // Enforce ends with that vowel
+//        let vowels: Set<Character> = ["a", "e", "i", "o", "u"]
+        
         // 3. Validate each signal against the corresponding word in the N-Gram
         for i in 0..<tornSignals.count {
-            let signal = tornSignals[i]
+            var signal = tornSignals[i]
             let word = ngramWords[i]
+            
+//            // Check if signal ends with a vowel
+//            if let lastChar = signal.last?.lowercased(), vowels.contains(Character(lastChar)) {
+//                // Insert one more of that vowel at the end
+//                signal.append(lastChar)
+//            }
             
             // We call your existing isMatch logic.
             // We pass empty toneMark as requested.

@@ -64,6 +64,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
     
     var currentExtraSuggestion: Int = 0
     var pattern: String = ""
+    var limboBuffer: String = ""
 
 	enum KeyboardState{
 		case letters
@@ -332,13 +333,39 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         
     }
     
-    private func adjustCase(for word: String) -> String {
+    private func adjustCase(for phrase: String, segments: [String]) -> String {
+        // 1. Absolute Caps Lock handles everything globally
         if shiftButtonState == .caps {
-            return word.uppercased()
-        } else if shiftButtonState == .shift || (!pattern.isEmpty && pattern.first!.isUppercase) {
-            return word.prefix(1).uppercased() + word.dropFirst()
+            return phrase.uppercased()
         }
-        return word
+        
+        let words = phrase.components(separatedBy: .whitespaces)
+        
+        // 2. Pair-matching check: Ensure counts match perfectly
+        if words.count == segments.count && !segments.isEmpty {
+            var adjustedWords: [String] = []
+            
+            for i in 0..<words.count {
+                let word = words[i]
+                let segment = segments[i]
+                
+                // Only care if the first character of the input segment is uppercase
+                if let firstChar = segment.first, firstChar.isUppercase {
+                    let capitalizedWord = word.prefix(1).uppercased() + word.dropFirst()
+                    adjustedWords.append(capitalizedWord)
+                } else {
+                    adjustedWords.append(word)
+                }
+            }
+            return adjustedWords.joined(separator: " ")
+        }
+        
+        // 3. Fallback Logic: Standard shifting fallback if segment mapping breaks
+        if shiftButtonState == .shift || (!limboBuffer.isEmpty && limboBuffer.first!.isUppercase) {
+            return phrase.prefix(1).uppercased() + phrase.dropFirst()
+        }
+        
+        return phrase
     }
     
     func updateSuggestions() {
@@ -349,18 +376,36 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
             keyboardLogger.debug("❌ cooker is nil")
             return
         }
-        let filtered = cooker.cookSuggestions(
-            signals: pattern,
+        
+        // 2. Determine which input signal to use
+        // If we are in ALPHA_UI_CODE, use limboBuffer
+        // Otherwise, fallback to the committed pattern
+        let activeSignals = (uiCodeState == Constants.ALPHA_UI_CODE) ? limboBuffer : pattern
+
+        // 3. Fetch suggestions from your logic engine
+        var filtered = cooker.cookSuggestions(
+            signals: activeSignals,
             predictions: currentPrediction,
             toneMark: currentTone,
             extraSuggestion: currentExtraSuggestion
         )
         
+        if filtered.isEmpty {
+            filtered = [limboBuffer]
+        }
+        
+        // 4. Extract segments from the actual user buffer
+        let segments = cooker.tokenizer!.signalTearer(signals: limboBuffer)
+
+        // 5. Adjust case for all filtered suggestions mapping against the segments
+        filtered = filtered.map { phrase in
+            return adjustCase(for: phrase, segments: segments)
+        }
+    
         // 🚀 Logic for XPACE (The Spacebar)
         // Only show prediction if the user has actually started typing (pattern is not empty)
         if let firstWord = filtered.first, !pattern.isEmpty && uiCodeState == Constants.OMEGA_UI_CODE {
-            let adjustedFirst = adjustCase(for: firstWord)
-            xpace?.setTitle(adjustedFirst, for: .normal)
+            xpace?.setTitle(firstWord, for: .normal)
             
             // Show the text-only highlight pill
             let highlightPill = xpace?.superview?.viewWithTag(99)
@@ -375,18 +420,16 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
 
         // 🟦 Show ALL suggestions in the bar (including the first one)
         for (index, word) in filtered.enumerated() {
-            let adjusted = adjustCase(for: word)
-
             let button = UIButton(type: .system)
-            button.setTitle(adjusted, for: .normal)
+            button.setTitle(word, for: .normal)
             button.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .regular)
             button.setTitleColor(Constants.textColor, for: .normal)
             button.layer.cornerRadius = 6
             button.addTarget(self, action: #selector(didTapSuggestion(_:)), for: .touchUpInside)
             button.contentEdgeInsets = UIEdgeInsets(top: 6, left: 12, bottom: 6, right: 12)
-
+            
             // Highlight the first item in the suggestion bar if pattern exists
-            if index == 0 && !pattern.isEmpty {
+            if index == 0 && (!pattern.isEmpty || !limboBuffer.isEmpty) {
                 button.backgroundColor = Constants.keyPressedColour
             } else {
                 button.backgroundColor = .clear
@@ -403,28 +446,35 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
     func didTapSuggestion(_ sender: UIButton, fromRadialMenu: Bool = false) {
         guard let word = sender.title(for: .normal) else { return }
         
-        // 🔸 Delete current pattern AND // 🔸 Insert selected word + space
-        // 🔹 Find first index from right that is a special
-        
-        if let lastSpecialIndex = pattern.lastIndex(where: { cooker!.tokenizer!.specials.contains($0) }) {
-            let deleteCount = pattern.distance(from: lastSpecialIndex, to: pattern.endIndex) - 1
-            for _ in 0..<deleteCount {
-                proxy.deleteBackward()
-            }
+        if uiCodeState == Constants.ALPHA_UI_CODE {
+            // Set to empty fist so it won't be emitted
+            resetLimbo()
             
-            insertTextAndTriggerChange(word)
+            if let lastSpecialIndex = pattern.lastIndex(where: { cooker?.tokenizer?.specials.contains($0) ?? false }) {
+                insertTextAndTriggerChange(word)
+            } else {
+                insertTextAndTriggerChange(word + " ")
+            }
         } else {
-            for _ in 0..<pattern.count {
-                proxy.deleteBackward()
+            // 🔸 Legacy Logic for committed patterns (Normal State)
+            if let lastSpecialIndex = pattern.lastIndex(where: { cooker?.tokenizer?.specials.contains($0) ?? false }) {
+                let deleteCount = pattern.distance(from: lastSpecialIndex, to: pattern.endIndex) - 1
+                for _ in 0..<deleteCount {
+                    textDocumentProxy.deleteBackward()
+                }
+                insertTextAndTriggerChange(word)
+            } else {
+                for _ in 0..<pattern.count {
+                    textDocumentProxy.deleteBackward()
+                }
+                insertTextAndTriggerChange(word + " ")
             }
-            
-            insertTextAndTriggerChange(word + " ")
         }
         
-        // 🔸 Insert selected word + space
+        // 🔸 UI Cleanup
         suggestionBar?.arrangedSubviews.forEach { $0.removeFromSuperview() }
         
-        // 🔸 Reset tone unless it comes from radial menu
+        // 🔸 Reset state
         if !fromRadialMenu {
             resetCurrentTone()
         }
@@ -434,8 +484,12 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
             loadKeys()
         }
         
-        // 🔸 Update cache
+        // 🔸 Logic updates
         cooker?.updateBias(with: word)
+        
+        // Final check to clear any remaining underlines
+        self.limboDidChange()
+        self.textDidChange(nil)
     }
     func emitTopPrediction() {
         guard let firstButton = suggestionBar?.arrangedSubviews.first as? UIButton else { return }
@@ -458,6 +512,38 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         if pattern == "" {
             xenter?.setTitle(Constants.ENTER, for: .normal)
         }
+    }
+    
+    private func resetLimbo() {
+        limboBuffer = ""
+
+        textDocumentProxy.setMarkedText(
+            "",
+            selectedRange: NSRange(location: 0, length: 0)
+        )
+
+        textDocumentProxy.unmarkText()
+    }
+    
+    func updateLiveSignals() {
+        guard let cooker = self.cooker, let tokenizer = cooker.tokenizer else {
+            return
+        }
+        
+        if limboBuffer.isEmpty {
+            // ❌ Instead of unmarkText(), use an empty marked string
+            // This explicitly tells iOS to "zero out" the underlined area
+            textDocumentProxy.setMarkedText("", selectedRange: NSRange(location: 0, length: 0))
+            
+            // Optional: Follow up with unmark to fully close the session
+            textDocumentProxy.unmarkText()
+            return
+        }
+
+        let segments = tokenizer.signalTearer(signals: limboBuffer)
+        let displayString = segments.joined(separator: " ")
+        
+        textDocumentProxy.setMarkedText(displayString, selectedRange: NSRange(location: displayString.count, length: 0))
     }
 
     func llm_predict() {
@@ -934,9 +1020,14 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
 		loadKeys()
 	}
     func handleDeleteButtonPressed() {
-        // More logic here
-        deleteBackwardAndTriggerChange()
+        if uiCodeState == Constants.ALPHA_UI_CODE && !limboBuffer.isEmpty {
+            deleteLimboAndTriggerChange()
+        } else {
+            // Otherwise, perform a standard backspace on the document
+            deleteBackwardAndTriggerChange()
+        }
     }
+    
     func handleEmojiButton() {
         for mode in UITextInputMode.activeInputModes {
             if mode.primaryLanguage == "emoji" {
@@ -951,24 +1042,40 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
 //        self.advanceToNextInputMode()
     }
     func handleXpace() {
+        // 1. Handle Limbo/ALPHA state first
+        if uiCodeState == Constants.ALPHA_UI_CODE && !limboBuffer.isEmpty {
+            insertTextAndTriggerChange(limboBuffer)
+            resetLimbo()
+            insertTextAndTriggerChange(" ")
+            self.limboDidChange()
+            return // Exit early so we don't insert a second space
+        }
+
+        // 2. Fallback to existing Space/Prediction logic
         guard let xpaceButton = self.xpace else {
-            // Fallback if xpace isn't initialized
             insertTextAndTriggerChange(" ")
             return
         }
 
         let currentTitle = xpaceButton.title(for: .normal)
 
-        // If the title is NOT the default space constant, it's a prediction
         if currentTitle != Constants.SPACE && currentTitle != "" {
             emitTopPrediction()
         } else {
-            // Standard spacebar behavior
             insertTextAndTriggerChange(" ")
             resetCurrentTone()
         }
     }
     func handleXenter() {
+        // 1. Handle Limbo/ALPHA state first
+        if uiCodeState == Constants.ALPHA_UI_CODE && !limboBuffer.isEmpty {
+            insertTextAndTriggerChange(limboBuffer)
+            resetLimbo()
+            insertTextAndTriggerChange("\n")
+            self.limboDidChange()
+            return // Exit early so we don't insert a second space
+        }
+        
         guard let xenterButton = self.xenter else {
             insertTextAndTriggerChange("\n")
             return
@@ -1003,7 +1110,22 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
 //            }
 //        }
 //    }
-	
+    
+    func insertLimboAndTriggerChange(_ key: String) {
+        // 1. Update the internal raw string (e.g., "nham")
+        limboBuffer += key
+        limboDidChange()
+    }
+    func deleteLimboAndTriggerChange() {
+        guard !limboBuffer.isEmpty else {
+            limboDidChange()
+            return
+        }
+        
+        // 1. Remove the last character from the buffer
+        limboBuffer.removeLast()
+        limboDidChange()
+    }
 	@IBAction func keyPressedTouchUp(_ sender: UIButton) {
         keyPressHaptic.impactOccurred()
 		guard let originalKey = sender.layer.value(forKey: "original") as? String, let keyToDisplay = sender.layer.value(forKey: "keyToDisplay") as? String else {return}
@@ -1042,7 +1164,16 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
                     shiftButtonState = .normal
                     loadKeys()
                 }
+            
+            if Constants.CHARS.contains(originalKey) && uiCodeState == Constants.ALPHA_UI_CODE {
+                insertLimboAndTriggerChange(keyToDisplay)
+            } else {
+                // If it's a number, punctuation, or uiCodeState is active, commit immediately
+                insertTextAndTriggerChange(limboBuffer)
+                resetLimbo()
+                self.limboDidChange()
                 insertTextAndTriggerChange(keyToDisplay)
+            }
 		}
     }
 	
@@ -1056,65 +1187,54 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
             updateSuggestions()
 		}
 	}
-    
     func delChunk() {
+        // 1. Check if we are in the ALPHA/Limbo state
+        if uiCodeState == Constants.ALPHA_UI_CODE && !limboBuffer.isEmpty {
+            guard let tokenizer = cooker?.tokenizer else { return }
+            
+            var segments = tokenizer.signalTearer(signals: limboBuffer)
+            
+            if !segments.isEmpty {
+                // 3. Remove the last syllable chunk
+                segments.removeLast()
+                
+                // 4. Reconstruct the raw buffer (e.g., "nha")
+                limboBuffer = segments.joined()
+                self.limboDidChange()
+            }
+            return // Exit because we handled the limbo deletion
+        }
+
+        // --- CASE 2: Standard Document Deletion (Existing Logic) ---
         let context = proxy.documentContextBeforeInput ?? ""
-        guard !context.isEmpty else { return }
-        guard let cooker = self.cooker else {
-            keyboardLogger.debug("❌ cooker is nil")
-            return
-        }
-        guard let tokenizer = cooker.tokenizer else {
-            keyboardLogger.debug("❌ tokenizer is nil")
-            return
-        }
+        guard !context.isEmpty, let tokenizer = cooker?.tokenizer else { return }
 
         let specials = tokenizer.specials
-
         var deleteCount = 0
         var index = context.index(before: context.endIndex)
-
         let lastChar = context[index]
 
-        // 🔥 CASE 1: Last char is special → delete all consecutive SAME specials
         if specials.contains(lastChar) {
             deleteCount = 1
-
             var currentIndex = index
-
             while currentIndex > context.startIndex {
                 let prevIndex = context.index(before: currentIndex)
-                let prevChar = context[prevIndex]
-
-                // stop if different char OR not special
-                if prevChar != lastChar || !specials.contains(prevChar) {
-                    break
-                }
-
+                if context[prevIndex] != lastChar || !specials.contains(context[prevIndex]) { break }
                 deleteCount += 1
                 currentIndex = prevIndex
             }
         } else {
-            // 🔥 CASE 2: Delete full token until hitting a special
             while true {
-                let char = context[index]
-                if specials.contains(char) { break }
-
+                if specials.contains(context[index]) { break }
                 deleteCount += 1
-
                 if index == context.startIndex { break }
                 index = context.index(before: index)
             }
         }
 
-        // Apply deletion
-        for _ in 0..<deleteCount {
-            proxy.deleteBackward()
-        }
-
+        for _ in 0..<deleteCount { proxy.deleteBackward() }
         self.textDidChange(nil)
     }
-    
 	
 	@objc func keyLongPressed(_ gesture: UIGestureRecognizer){
 		if gesture.state == .began {
@@ -1153,12 +1273,24 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         proxy.deleteBackward()
         self.textDidChange(nil)
     }
-
+    
+    func limboDidChange() {
+        self.updateLiveSignals()
+        self.llm_predict()
+    }
 	
-	override func textDidChange(_ textInput: UITextInput?) {
-		// The app has just changed the document's contents, the document context has been updated.
+    override func textDidChange(_ textInput: UITextInput?) {
+        // 1. Check if the document is actually empty
+        // We check the proxy to see if there is any context before the cursor
+        let context = textDocumentProxy.documentContextBeforeInput ?? ""
+        if context.isEmpty {
+            limboBuffer = ""
+        }
+        
+        // Standard update flow if context exists
         currentExtraSuggestion = 0
         self.updatePattern()
+        self.updateLiveSignals()
         self.llm_predict()
     }
 }

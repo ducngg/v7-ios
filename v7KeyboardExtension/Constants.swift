@@ -35,6 +35,7 @@ enum Constants {
     
     static let NGRAM_LIMIT_QUERY = 3000
     static let NGRAM_TOP_K = 16
+    static let NGRAM_SCORESUM_LOGBASE: Float = 60.0  // bigger base = softer punishment (just like temperature, it will amplify lower tokens for easy sum (0.3+0.0001 -> 0.13+0.05))
     
     static let EXTRA_SUGGESTION_STEP: Int = 16
     static let EXTRA_SUGGESTION_MAX: Int = 64
@@ -63,7 +64,7 @@ enum Constants {
             return .black
         }
     }
-    static func textFont(uiCode: Int, size: CGFloat = 21) -> UIFont {
+    static func textFont(uiCode: Int, size: CGFloat = 22) -> UIFont {
         let baseFont = UIFont.systemFont(ofSize: size)
 
         switch uiCode {
@@ -261,6 +262,7 @@ enum Constants {
         "hong", "không",
         "luôn",
     ]
+    static let CHARS: Set<String> = ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p", "a", "s", "d", "đ", "f", "g", "h", "j", "k", "l", "z", "x", "c", "v", "b", "n", "m"]
     
     static let allowedRadialKeys: Set<String> = {
         var keys = Set((97...122).map { String(UnicodeScalar($0)! ) }) // a–z

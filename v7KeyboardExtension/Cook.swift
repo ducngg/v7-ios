@@ -255,11 +255,15 @@ final class Cooker {
             scoreMap[id] = predictions.scores[index]
         }
 
-        // Precompute summed score once
         let scoredCandidates = candidates.map { candidate in
-            let predictionScore = candidate.tokens.reduce(Float(0)) {
-                $0 + (scoreMap[$1] ?? 0)
-            }
+
+            let predictionScore =
+                candidate.tokens.reduce(Float(0)) {
+
+                    let prob = max(scoreMap[$1] ?? 1e-8, 1e-8)
+
+                    return $0 + log(prob) / log(Constants.NGRAM_SCORESUM_LOGBASE)
+                } / Float(candidate.tokens.count)
 
             return (
                 candidate: candidate,
