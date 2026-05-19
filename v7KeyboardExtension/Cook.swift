@@ -290,19 +290,25 @@ final class Cooker {
         toneMark: String,
         extraSuggestion: Int
     ) -> [String] {
+        let lowerSignals = signals.lowercased()
+        let tornSignals = tokenizer?.signalTearer(signals: lowerSignals) ?? []
+        
         // 1. Get filtered results from LLM predictions (using existing logic)
-        var filteredLLM = tokenizer?.filter(
-            pattern: signals,
-            predictions: predictions,
-            toneMark: toneMark,
-            extraSuggestion: extraSuggestion
-        ) ?? []
+        var filteredLLM: [String] = []
+
+        // Zero when no signal, >= 2 for multi
+        if tornSignals.count <= 1 {
+            filteredLLM = tokenizer?.filter(
+                pattern: signals,
+                predictions: predictions,
+                toneMark: toneMark,
+                extraSuggestion: extraSuggestion
+            ) ?? []
+        }
 
         filteredLLM = filteredLLM.filter { ![",", "."].contains($0) }
 
         // 2. 🔥 Query SQLite N-Grams
-        let lowerSignals = signals.lowercased()
-        let tornSignals = tokenizer?.signalTearer(signals: lowerSignals) ?? []
         let key = buildKey(from: tornSignals)
 
         var ngramCandidates = ngramDB.queryWithTokens(key: key)
@@ -318,9 +324,11 @@ final class Cooker {
             if tokenizer!.isMatchNgram(
                 tornSignals: tornSignals,
                 ngram: candidate.text,
-                tokens: candidate.tokens
+                tokens: candidate.tokens,
+                lastToneMark: toneMark,
             ) {
                 validNgrams.append(candidate.text)
+                keyboardLogger.debug("\(candidate.text, privacy: .public) \(toneMark, privacy: .public)")
             }
         }
 

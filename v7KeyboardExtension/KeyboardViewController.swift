@@ -392,6 +392,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         
         if filtered.isEmpty {
             filtered = [limboBuffer]
+            reloadLiveLimbo(tear: false)
         }
         
         // 4. Extract segments from the actual user buffer
@@ -400,22 +401,6 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         // 5. Adjust case for all filtered suggestions mapping against the segments
         filtered = filtered.map { phrase in
             return adjustCase(for: phrase, segments: segments)
-        }
-    
-        // 🚀 Logic for XPACE (The Spacebar)
-        // Only show prediction if the user has actually started typing (pattern is not empty)
-        if let firstWord = filtered.first, !pattern.isEmpty && uiCodeState == Constants.OMEGA_UI_CODE {
-            xpace?.setTitle(firstWord, for: .normal)
-            
-            // Show the text-only highlight pill
-            let highlightPill = xpace?.superview?.viewWithTag(99)
-            highlightPill?.isHidden = false
-            
-            xenter?.setTitle(Constants.XENTER, for: .normal)
-        } else {
-            // Default back to "Space" if no pattern is active
-            xpace?.setTitle(Constants.SPACE, for: .normal)
-            xpace?.superview?.viewWithTag(99)?.isHidden = true
         }
 
         // 🟦 Show ALL suggestions in the bar (including the first one)
@@ -509,9 +494,6 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
             let terms = context.split(separator: " ").map(String.init)
             pattern = terms.last ?? ""
         }
-        if pattern == "" {
-            xenter?.setTitle(Constants.ENTER, for: .normal)
-        }
     }
     
     private func resetLimbo() {
@@ -525,7 +507,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         textDocumentProxy.unmarkText()
     }
     
-    func updateLiveSignals() {
+    func reloadLiveLimbo(tear: Bool = true) {
         guard let cooker = self.cooker, let tokenizer = cooker.tokenizer else {
             return
         }
@@ -540,8 +522,13 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
             return
         }
 
-        let segments = tokenizer.signalTearer(signals: limboBuffer)
-        let displayString = segments.joined(separator: " ")
+        let displayString: String
+        if tear {
+            let segments = tokenizer.signalTearer(signals: limboBuffer)
+            displayString = segments.joined(separator: " ")
+        } else {
+            displayString = limboBuffer
+        }
         
         textDocumentProxy.setMarkedText(displayString, selectedRange: NSRange(location: displayString.count, length: 0))
     }
@@ -665,8 +652,8 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
 
             // 🔹 If menu was dismissed due to over-move, ignore
             guard let radialMenu = radialMenu else {
-                if !pattern.isEmpty { emitTopPrediction() }
-                insertTextAndTriggerChange(term)
+//                if !pattern.isEmpty { emitTopPrediction() }
+//                insertTextAndTriggerChange(term)
                 
                 // 🔹 Reset key color when menu dismissed
                 resetButtonBackgroundColor(btn: keyButton)
@@ -676,7 +663,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
             if let selectedItem = radialMenu.selectedItem {
                 if selectedItem == "." || selectedItem == "," {
                     // Special punctuation handling
-                    if !pattern.isEmpty && !currentTone.isEmpty {
+                    if !limboBuffer.isEmpty {
                         emitTopPrediction()
                     }
                     if (proxy.documentContextBeforeInput ?? "").hasSuffix(" ") {
@@ -687,15 +674,12 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
                 } else {
                     // Normal tone-mark behavior
                     currentTone = selectedItem
-                    if !pattern.isEmpty {
-                        emitTopPrediction()
-                    }
-                    insertTextAndTriggerChange(term)
+                    insertLimboAndTriggerChange(term)
                 }
             } else {
                 // No radial selection
-                if !pattern.isEmpty { emitTopPrediction() }
-                insertTextAndTriggerChange(term)
+//                if !limboBuffer.isEmpty { emitTopPrediction() }
+//                insertTextAndTriggerChange(term)
             }
 
             keyboardLogger.debug("\(term, privacy: .public) \(self.currentTone, privacy: .public)")
@@ -905,25 +889,6 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
                 // 🔥 XPACE HIGHLIGHT LOGIC
                 if key == Constants.SPACE {
                     self.xpace = btn
-                    
-                    // Create a "Pill" view that sits behind the text
-                    let highlightPill = UIView()
-                    highlightPill.backgroundColor = Constants.keyPressedColour
-                    highlightPill.layer.cornerRadius = 4
-                    highlightPill.isUserInteractionEnabled = false
-                    highlightPill.translatesAutoresizingMaskIntoConstraints = false
-                    highlightPill.tag = 99
-                    highlightPill.isHidden = true // Hidden by default
-                    
-                    container.addSubview(highlightPill)
-                    
-                    NSLayoutConstraint.activate([
-                        highlightPill.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-                        highlightPill.centerYAnchor.constraint(equalTo: container.centerYAnchor),
-                        // Make the pill slightly larger than expected text bounds
-                        highlightPill.heightAnchor.constraint(equalToConstant: 28),
-                        highlightPill.widthAnchor.constraint(greaterThanOrEqualToConstant: 70)
-                    ])
                 }
                 if key == Constants.ENTER {
                     self.xenter = btn
@@ -1050,21 +1015,8 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
             self.limboDidChange()
             return // Exit early so we don't insert a second space
         }
-
-        // 2. Fallback to existing Space/Prediction logic
-        guard let xpaceButton = self.xpace else {
-            insertTextAndTriggerChange(" ")
-            return
-        }
-
-        let currentTitle = xpaceButton.title(for: .normal)
-
-        if currentTitle != Constants.SPACE && currentTitle != "" {
-            emitTopPrediction()
-        } else {
-            insertTextAndTriggerChange(" ")
-            resetCurrentTone()
-        }
+        
+        insertTextAndTriggerChange(" ")
     }
     func handleXenter() {
         // 1. Handle Limbo/ALPHA state first
@@ -1076,26 +1028,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
             return // Exit early so we don't insert a second space
         }
         
-        guard let xenterButton = self.xenter else {
-            insertTextAndTriggerChange("\n")
-            return
-        }
-
-        let currentTitle = xenterButton.title(for: .normal)
-
-        // If the button is in "XENTER" mode, clean up and commit
-        if currentTitle == Constants.XENTER {
-            // 1. Reset xpace to standard space
-            xpace?.setTitle(Constants.SPACE, for: .normal)
-            xpace?.superview?.viewWithTag(99)?.isHidden = true
-            
-            // 2. Reset xenter back to the return icon/text
-            xenterButton.setTitle(Constants.ENTER, for: .normal)
-            
-        } else {
-            // Standard Enter behavior
-            insertTextAndTriggerChange("\n")
-        }
+        insertTextAndTriggerChange("\n")
     }
     
     // For gradients
@@ -1275,7 +1208,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
     }
     
     func limboDidChange() {
-        self.updateLiveSignals()
+        self.reloadLiveLimbo()
         self.llm_predict()
     }
 	
@@ -1290,7 +1223,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         // Standard update flow if context exists
         currentExtraSuggestion = 0
         self.updatePattern()
-        self.updateLiveSignals()
+        self.reloadLiveLimbo()
         self.llm_predict()
     }
 }

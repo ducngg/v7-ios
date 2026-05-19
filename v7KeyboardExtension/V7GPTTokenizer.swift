@@ -315,7 +315,8 @@ class GPTTokenizer {
     func isMatchNgram(
         tornSignals: [String],
         ngram: String,
-        tokens: [Int]
+        tokens: [Int],
+        lastToneMark: String,
     ) -> Bool {
         // 1. Split the N-Gram text into individual words
         // We use lowercased to match your tokenizer's normalization
@@ -334,6 +335,10 @@ class GPTTokenizer {
         for i in 0..<tornSignals.count {
             var signal = tornSignals[i]
             let word = ngramWords[i]
+            let token = tokens[i]
+            let toneMark = (i == tornSignals.count - 1)
+                ? lastToneMark
+                : ""
             
 //            // Check if signal ends with a vowel
 //            if let lastChar = signal.last?.lowercased(), vowels.contains(Character(lastChar)) {
@@ -344,7 +349,14 @@ class GPTTokenizer {
             // We call your existing isMatch logic.
             // We pass empty toneMark as requested.
             // idx is usually used for position-based logic in tokenizers.
-            if !isMatch(effectivePattern: signal, word: word, idx: i, toneMark: "") {
+            // Use tone mark only for the last signal
+
+            if !isMatch(
+                effectivePattern: signal,
+                word: word,
+                idx: token,
+                toneMark: toneMark
+            ) {
                 return false
             }
         }
