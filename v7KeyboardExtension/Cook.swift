@@ -10,6 +10,18 @@ import CoreML
 
 import SQLite3
 
+private struct FusionConfig {
+    /// score = llmWeight * log(P_llm) + ngramWeight * log(P_ngram)
+    static let llmWeight: Float = 1.0
+    static let ngramWeight: Float = 0.5
+
+    /// >1.0 makes ngram distribution flatter.
+    /// Try 2~3 first.
+    static let ngramTemperature: Float = 2.0
+
+    static let epsilon: Float = 1e-8
+}
+
 typealias NGramEntryWithTokens = (text: String, score: Int, tokens: [Int])
 typealias PredictionResult = (candidates: [Int], scores: [Float])
 class NGramDatabase {
@@ -247,40 +259,82 @@ final class Cooker {
         predictions: PredictionResult
     ) -> [NGramEntryWithTokens] {
 
-        // O(1) token score lookup
-        var scoreMap: [Int: Float] = [:]
-        scoreMap.reserveCapacity(predictions.candidates.count)
+        //------------------------------------------
+        // LLM lookup table
+        //------------------------------------------
 
-        for (index, id) in predictions.candidates.enumerated() {
-            scoreMap[id] = predictions.scores[index]
+        var tokenProb: [Int: Float] = [:]
+        tokenProb.reserveCapacity(predictions.candidates.count)
+
+        for (i, id) in predictions.candidates.enumerated() {
+            tokenProb[id] = predictions.scores[i]
         }
 
-        let scoredCandidates = candidates.map { candidate in
+        //------------------------------------------
+        // Build P(ngram)
+        //------------------------------------------
 
-            let predictionScore =
-                candidate.tokens.reduce(Float(0)) {
+        let invTemp = 1.0 / FusionConfig.ngramTemperature
 
-                    let prob = max(scoreMap[$1] ?? 1e-8, 1e-8)
+        var softenedCounts = [Float]()
+        softenedCounts.reserveCapacity(candidates.count)
 
-                    return $0 + log(prob) / log(Constants.NGRAM_SCORESUM_LOGBASE)
+        var total: Float = 0
+
+        for candidate in candidates {
+            let value = pow(Float(candidate.score), invTemp)
+            softenedCounts.append(value)
+            total += value
+        }
+
+        //------------------------------------------
+        // Score candidates
+        //------------------------------------------
+
+        let lnBase = log(Constants.NGRAM_SCORESUM_LOGBASE)
+
+        let scored = zip(candidates, softenedCounts).map { candidate, softenedCount in
+
+            //-----------------------------
+            // LLM score
+            //-----------------------------
+
+            let llmLogProb =
+                candidate.tokens.reduce(Float(0)) { partial, token in
+
+                    let p = max(tokenProb[token] ?? FusionConfig.epsilon,
+                                FusionConfig.epsilon)
+
+                    return partial + log(p) / lnBase
                 } / Float(candidate.tokens.count)
+
+            //-----------------------------
+            // Ngram probability
+            //-----------------------------
+
+            let pNgram = max(
+                softenedCount / total,
+                FusionConfig.epsilon
+            )
+
+            let ngramLogProb = log(pNgram)
+
+            //-----------------------------
+            // Final
+            //-----------------------------
+
+            let finalScore =
+                  FusionConfig.llmWeight   * llmLogProb
+                + FusionConfig.ngramWeight * ngramLogProb
 
             return (
                 candidate: candidate,
-                predictionScore: predictionScore
+                score: finalScore
             )
         }
 
-        // Sort cached scores
-        return scoredCandidates
-            .sorted { a, b in
-
-                if a.predictionScore == b.predictionScore {
-                    return a.candidate.score > b.candidate.score
-                }
-
-                return a.predictionScore > b.predictionScore
-            }
+        return scored
+            .sorted { $0.score > $1.score }
             .map(\.candidate)
     }
     

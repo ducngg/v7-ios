@@ -945,6 +945,14 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
                         target: self, action: #selector(keyLongPressed(_:))
                     ))
                 }
+                
+                if key == Constants.EMOJI {
+                    btn.addTarget(
+                        self,
+                        action: #selector(handleInputModeList(from:with:)),
+                        for: .allTouchEvents
+                    )
+                }
 
                 // BUTTON TARGETS (UNCHANGED)
                 btn.addTarget(self, action: #selector(keyPressedTouchUp), for: .touchUpInside)
@@ -998,7 +1006,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
             if mode.primaryLanguage == "emoji" {
                 // Switch to emoji keyboard
 //                self.advanceToNextInputMode()
-                currentTone = "☻"
+                currentTone = Constants.EMOJI
                 return
             }
         }
@@ -1089,7 +1097,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
                 shiftButtonState = shiftButtonState == .normal ? .shift : .normal
                 loadKeys()
                 updateSuggestions()
-            case "☻": // 🔹 or whatever label you use
+            case Constants.EMOJI:
                 handleEmojiButton()
 
             default:
@@ -1225,5 +1233,30 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         self.updatePattern()
         self.reloadLiveLimbo()
         self.llm_predict()
+    }
+    
+    override func selectionDidChange(_ textInput: UITextInput?) {
+        super.selectionDidChange(textInput)
+        proxy.insertText("1")
+
+        if !limboBuffer.isEmpty {
+            insertTextAndTriggerChange(limboBuffer)
+            resetLimbo()
+            self.limboDidChange()
+            proxy.insertText("2")
+        }
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        proxy.insertText("3")
+
+        super.viewWillDisappear(animated)
+        if !limboBuffer.isEmpty {
+            insertTextAndTriggerChange(limboBuffer)
+            resetLimbo()
+            self.limboDidChange()
+            proxy.insertText("4")
+
+        }
     }
 }

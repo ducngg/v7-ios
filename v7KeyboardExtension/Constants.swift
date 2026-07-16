@@ -24,7 +24,8 @@ enum Constants {
     static let SPACE = "  "
     static let ENTER = "⏎"
     static let XENTER = "␣"
-    
+    static let EMOJI = "☻"
+
     static let ALPHA_UI_CODE = 0
     static let OMEGA_UI_CODE = 1
     static let NUMBER_OF_UI_CODES: Int = 2
@@ -35,7 +36,8 @@ enum Constants {
     
     static let NGRAM_LIMIT_QUERY = 3000
     static let NGRAM_TOP_K = 16
-    static let NGRAM_SCORESUM_LOGBASE: Float = 60.0  // bigger base = softer punishment (just like temperature, it will amplify lower tokens for easy sum (0.3+0.0001 -> 0.13+0.05))
+    static let NGRAM_SCORESUM_LOGBASE: Float = 10.0  // bigger base = softer punishment (just like temperature, it will amplify lower tokens for easy sum (0.3+0.0001 -> 0.13+0.05))
+    static let NGRAM_COUNT_LOGBASE: Float = 10.0
     
     static let EXTRA_SUGGESTION_STEP: Int = 16
     static let EXTRA_SUGGESTION_MAX: Int = 64
@@ -224,27 +226,27 @@ enum Constants {
 		["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],
 		["a", "s", "d", "đ", "f", "g", "h", "j", "k", "l"],
 		["⇧", "z", "x", "c", "v", "b", "n", "m", "⌫"],
-		["123", "☻", SPACE, ENTER]
+		["123", EMOJI, SPACE, ENTER]
     ] : [
         ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],
         ["a", "s", "d", "f", "g", "h", "j", "k", "l"],
         ["⇧", "z", "x", "c", "v", "b", "n", "m", "⌫"],
-        ["123", "☻", SPACE, ENTER]
+        ["123", EMOJI, SPACE, ENTER]
     ]
 	static let numberKeys = [
 		["1", "2", "3", "4", "5", "6", "7", "8", "9", "0",],
 		["-", "/", ":", ";", "(", ")" , "$", "&", "@", "\""],
 		["#+=",".", ",", "?", "!", "\'", "⌫"],
-		["ABC", "☻", SPACE, ENTER]
+		["ABC", EMOJI, SPACE, ENTER]
 	]
 	
 	static let symbolKeys = [
 		["[", "]", "{", "}", "#", "%", "^", "*", "+", "="],
 		["_", "\\", "|", "~", "<", ">", "€", "£", "¥", "₫"],
 		["123","·", ",", "?", "!", "`", "⌫"],
-		["ABC", "☻", SPACE, ENTER]
+		["ABC", EMOJI, SPACE, ENTER]
 	]
-    static let specialKeys = ["⇧", "⌫", "#+=", "☻", ENTER]
+    static let specialKeys = ["⇧", "⌫", "#+=", EMOJI, ENTER]
     
     static let modalParticles = [
         "nhé", "nha", "nhe", "nhá",
