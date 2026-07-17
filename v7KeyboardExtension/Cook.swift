@@ -10,18 +10,6 @@ import CoreML
 
 import SQLite3
 
-private struct FusionConfig {
-    /// score = llmWeight * log(P_llm) + ngramWeight * log(P_ngram)
-    static let llmWeight: Float = 1.0
-    static let ngramWeight: Float = 0.5
-
-    /// >1.0 makes ngram distribution flatter.
-    /// Try 2~3 first.
-    static let ngramTemperature: Float = 2.0
-
-    static let epsilon: Float = 1e-8
-}
-
 typealias NGramEntryWithTokens = (text: String, score: Int, tokens: [Int])
 typealias PredictionResult = (candidates: [Int], scores: [Float])
 class NGramDatabase {
@@ -274,7 +262,7 @@ final class Cooker {
         // Build P(ngram)
         //------------------------------------------
 
-        let invTemp = 1.0 / FusionConfig.ngramTemperature
+        let invTemp = 1.0 / Constants.FUSION_NGRAM_COUNT_TEMP
 
         var softenedCounts = [Float]()
         softenedCounts.reserveCapacity(candidates.count)
@@ -291,7 +279,7 @@ final class Cooker {
         // Score candidates
         //------------------------------------------
 
-        let lnBase = log(Constants.NGRAM_SCORESUM_LOGBASE)
+        let lnBase = log(Constants.FUSION_TOKEN_PROB_LOGBASE)
 
         let scored = zip(candidates, softenedCounts).map { candidate, softenedCount in
 
@@ -302,8 +290,8 @@ final class Cooker {
             let llmLogProb =
                 candidate.tokens.reduce(Float(0)) { partial, token in
 
-                    let p = max(tokenProb[token] ?? FusionConfig.epsilon,
-                                FusionConfig.epsilon)
+                    let p = max(tokenProb[token] ?? Constants.FUSION_TOKEN_PROB_EPSILON,
+                                Constants.FUSION_TOKEN_PROB_EPSILON)
 
                     return partial + log(p) / lnBase
                 } / Float(candidate.tokens.count)
@@ -314,7 +302,7 @@ final class Cooker {
 
             let pNgram = max(
                 softenedCount / total,
-                FusionConfig.epsilon
+                Constants.FUSION_TOKEN_PROB_EPSILON
             )
 
             let ngramLogProb = log(pNgram)
@@ -324,8 +312,8 @@ final class Cooker {
             //-----------------------------
 
             let finalScore =
-                  FusionConfig.llmWeight   * llmLogProb
-                + FusionConfig.ngramWeight * ngramLogProb
+                Constants.FUSION_LLM_WEIGHT   * llmLogProb
+                + Constants.FUSION_NGRAM_WEIGHT * ngramLogProb
 
             return (
                 candidate: candidate,

@@ -237,57 +237,8 @@ class GPTTokenizer {
         
         var effectiveToneMark = toneMark
         var effectivePattern = currentPattern
-        if effectiveToneMark.isEmpty, effectivePattern.count > 1 {
-            let toneMap: [Character: String] = [
-                "s": "◌́",
-                "z": "◌",
-                "f": "◌̀",
-                "j": "◌̣",
-                "x": "◌̃",
-                "r": "◌̉"
-            ]
-
-            var index = effectivePattern.index(after: effectivePattern.startIndex)
-
-            while index < effectivePattern.endIndex {
-                let char = effectivePattern[index]
-
-                if let mappedTone = toneMap[char] {
-                    // 🔥 override toneMark
-                    effectiveToneMark = mappedTone
-
-                    // 🔥 remove that char from pattern
-                    effectivePattern.remove(at: index)
-
-                    break
-                }
-
-                index = effectivePattern.index(after: index)
-            }
-        }
         
-        // 🔹 Adjust special consonants
-        if !effectiveToneMark.isEmpty, !effectivePattern.isEmpty {
-            let firstChar = effectivePattern.first!.lowercased()
-            let rest = String(effectivePattern.dropFirst())
-            switch firstChar {
-                case "j": effectivePattern = "tr" + rest // For future telex usage j+r - tr+r
-                case "z": effectivePattern = "gi" + rest
-                case "f": effectivePattern = "ph" + rest
-                default: break
-            }
-        }
         effectivePattern = effectivePattern.lowercased()
-
-//        // 🔹 Pre-check for punctuation leading prediction
-//        if let first = predictions.first, first == 17818 || first == 17819 {
-//            for modal in Constants.modalParticles {
-//                if isMatch(word: modal, idx: -1, effectivePattern: effectivePattern, toneMark: toneMark) {
-//                    result.append(modal)
-//                    if result.count >= Constants.TOP_K { return result }
-//                }
-//            }
-//        }
 
         // 🔹 Normal prediction loop
         var iterate = 0

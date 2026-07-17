@@ -36,8 +36,15 @@ enum Constants {
     
     static let NGRAM_LIMIT_QUERY = 3000
     static let NGRAM_TOP_K = 16
-    static let NGRAM_SCORESUM_LOGBASE: Float = 10.0  // bigger base = softer punishment (just like temperature, it will amplify lower tokens for easy sum (0.3+0.0001 -> 0.13+0.05))
-    static let NGRAM_COUNT_LOGBASE: Float = 10.0
+    static let FUSION_TOKEN_PROB_LOGBASE: Float = 10.0  // bigger base = softer punishment (just like temperature, it will amplify lower tokens for easy sum (0.3+0.0001 -> 0.13+0.05))
+    static let FUSION_TOKEN_PROB_EPSILON: Float = 1e-8
+    /// >1.0 makes ngram distribution flatter.
+    /// Try 2~3 first.
+    static let FUSION_NGRAM_COUNT_TEMP: Float = 2.0
+    /// score = llmWeight * log(P_llm) + ngramWeight * log(P_ngram)
+    static let FUSION_NGRAM_WEIGHT: Float = 0.5
+    static let FUSION_LLM_WEIGHT: Float = 1.0
+
     
     static let EXTRA_SUGGESTION_STEP: Int = 16
     static let EXTRA_SUGGESTION_MAX: Int = 64
