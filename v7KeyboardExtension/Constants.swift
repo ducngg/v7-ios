@@ -21,17 +21,19 @@ enum Constants {
     static let DEFAULT_CONTEXT = "vậy"
 //    static let DEFAULT_CONTEXT = "bây giờ"
 
-    static let SPACE = "  "
+    static let SPACE = "   "
+    static let XPACE = "  "
     static let ENTER = "⏎"
     static let XENTER = "␣"
     static let EMOJI = "☻"
+    static let ABC = "AĂÂ"
 
     static let ALPHA_UI_CODE = 0
     static let OMEGA_UI_CODE = 1
     static let NUMBER_OF_UI_CODES: Int = 2
 
     static let LLM_TOP_K = 16
-    static let MAX_FILTER_ITERATE = 2048 * 2 // 2048
+    static let MAX_FILTER_ITERATE = 2048 * 3 // 2048
     static let MAX_FILTER_ITERATE_VIET = VOCAB_SIZE // 16384 // For rare words to be always findable
     
     static let NGRAM_LIMIT_QUERY = 3000
@@ -73,7 +75,7 @@ enum Constants {
             return .black
         }
     }
-    static func textFont(uiCode: Int, size: CGFloat = 22) -> UIFont {
+    static func textFont(uiCode: Int, size: CGFloat = 23) -> UIFont {
         let baseFont = UIFont.systemFont(ofSize: size)
 
         switch uiCode {
@@ -233,25 +235,25 @@ enum Constants {
 		["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],
 		["a", "s", "d", "đ", "f", "g", "h", "j", "k", "l"],
 		["⇧", "z", "x", "c", "v", "b", "n", "m", "⌫"],
-		["123", EMOJI, SPACE, ENTER]
+		["123", EMOJI, XPACE, SPACE, ENTER]
     ] : [
         ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],
         ["a", "s", "d", "f", "g", "h", "j", "k", "l"],
         ["⇧", "z", "x", "c", "v", "b", "n", "m", "⌫"],
-        ["123", EMOJI, SPACE, ENTER]
+        ["123", EMOJI, XPACE, SPACE, ENTER]
     ]
 	static let numberKeys = [
 		["1", "2", "3", "4", "5", "6", "7", "8", "9", "0",],
 		["-", "/", ":", ";", "(", ")" , "$", "&", "@", "\""],
 		["#+=",".", ",", "?", "!", "\'", "⌫"],
-		["ABC", EMOJI, SPACE, ENTER]
+		[ABC, EMOJI, SPACE, ENTER]
 	]
 	
 	static let symbolKeys = [
 		["[", "]", "{", "}", "#", "%", "^", "*", "+", "="],
 		["_", "\\", "|", "~", "<", ">", "€", "£", "¥", "₫"],
 		["123","·", ",", "?", "!", "`", "⌫"],
-		["ABC", EMOJI, SPACE, ENTER]
+		[ABC, EMOJI, SPACE, ENTER]
 	]
     static let specialKeys = ["⇧", "⌫", "#+=", EMOJI, ENTER]
     
@@ -273,10 +275,11 @@ enum Constants {
     ]
     static let CHARS: Set<String> = ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p", "a", "s", "d", "đ", "f", "g", "h", "j", "k", "l", "z", "x", "c", "v", "b", "n", "m"]
     
-    static let allowedRadialKeys: Set<String> = {
-        var keys = Set((97...122).map { String(UnicodeScalar($0)! ) }) // a–z
-        keys.insert(SPACE)
-        keys.insert("đ")
-        return keys
-    }()
+//    static let allowedRadialKeys: Set<String> = {
+//        var keys = Set((97...122).map { String(UnicodeScalar($0)! ) }) // a–z
+//        keys.insert(SPACE)
+//        keys.insert("đ")
+//        return keys
+//    }()
+    static let allowedRadialKeys = Set([SPACE, XPACE])
 }

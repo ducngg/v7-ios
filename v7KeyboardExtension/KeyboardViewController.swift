@@ -664,7 +664,11 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
                 if selectedItem == "." || selectedItem == "," {
                     // Special punctuation handling
                     if !limboBuffer.isEmpty {
-                        emitTopPrediction()
+//                        emitTopPrediction()
+                        
+                        insertTextAndTriggerChange(limboBuffer)
+                        resetLimbo()
+                        self.limboDidChange()
                     }
                     if (proxy.documentContextBeforeInput ?? "").hasSuffix(" ") {
                         proxy.deleteBackward()
@@ -674,7 +678,9 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
                 } else {
                     // Normal tone-mark behavior
                     currentTone = selectedItem
-                    insertLimboAndTriggerChange(term)
+                    
+                    // insertLimboAndTriggerChange(term)
+                    insertLimboAndTriggerChange("")
                 }
             } else {
                 // No radial selection
@@ -707,9 +713,12 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
             if key == Constants.SPACE {
                 radialMenu = RadialMenuView(frame: CGRect(x: 0, y: 0, width: 80, height: 80),
                                             items: [".", ","])
-            } else {
+            } else if key == Constants.XPACE {
                 radialMenu = RadialMenuView(frame: CGRect(x: 0, y: 0, width: 120, height: 120),
                                             items: ["◌́", "◌", "◌̀", "◌̣", "◌̃", "◌̉"])
+            }
+            else {
+                return
             }
             view.addSubview(radialMenu!)
         }
@@ -755,7 +764,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         totalMultiplier: CGFloat
     ) {
 
-        let isSpecial = ["⌫", "#+=", "ABC", "123", "⇧", "⏎", "☻"].contains(key)
+        let isSpecial = ["⌫", "#+=", Constants.ABC, "123", "⇧", "⏎", Constants.EMOJI].contains(key)
 
         if isSpecial {
             btn.layer.setValue(true, forKey: "isSpecial")
@@ -769,11 +778,12 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
 
             let customMultiplier: CGFloat
             switch key {
-            case "☻": customMultiplier = 1.1
+            case Constants.EMOJI: customMultiplier = 1.1
+            case Constants.XPACE: customMultiplier = 1.4
             case "⌫": customMultiplier = 1.5
-            case "⏎": customMultiplier = 2.6
+            case "⏎": customMultiplier = 2.2
             case "123": customMultiplier = 1.3
-            case "ABC": customMultiplier = 1.3
+            case Constants.ABC: customMultiplier = 1.3
             case "#+=": customMultiplier = 1.3
             default: customMultiplier = 1.4
             }
@@ -887,7 +897,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
                 container.addSubview(shadowView)
                 
                 // 🔥 XPACE HIGHLIGHT LOGIC
-                if key == Constants.SPACE {
+                if key == Constants.XPACE {
                     self.xpace = btn
                 }
                 if key == Constants.ENTER {
@@ -1014,7 +1024,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         // If no emoji mode found, just cycle input modes
 //        self.advanceToNextInputMode()
     }
-    func handleXpace() {
+    func handleSpace() {
         // 1. Handle Limbo/ALPHA state first
         if uiCodeState == Constants.ALPHA_UI_CODE && !limboBuffer.isEmpty {
             insertTextAndTriggerChange(limboBuffer)
@@ -1022,6 +1032,18 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
             insertTextAndTriggerChange(" ")
             self.limboDidChange()
             return // Exit early so we don't insert a second space
+        }
+        
+        insertTextAndTriggerChange(" ")
+    }
+    func handleXpace() {
+        // 1. Handle Limbo/ALPHA state first
+        if uiCodeState == Constants.ALPHA_UI_CODE && !limboBuffer.isEmpty {
+            if !limboBuffer.hasSuffix(" ") {
+                limboBuffer += " "
+                limboDidChange()
+            }
+            return
         }
         
         insertTextAndTriggerChange(" ")
@@ -1082,6 +1104,9 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
                 resetCurrentTone()
 
             case Constants.SPACE:
+                handleSpace()
+            
+            case Constants.XPACE:
                 handleXpace()
 
             case Constants.ENTER:
@@ -1089,7 +1114,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
 
             case "123":
                 changeKeyboardToNumberKeys()
-            case "ABC":
+            case Constants.ABC:
                 changeKeyboardToLetterKeys()
             case "#+=":
                 changeKeyboardToSymbolKeys()
@@ -1237,25 +1262,25 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
     
     override func selectionDidChange(_ textInput: UITextInput?) {
         super.selectionDidChange(textInput)
-        proxy.insertText("1")
+//        proxy.insertText("1")
 
         if !limboBuffer.isEmpty {
             insertTextAndTriggerChange(limboBuffer)
             resetLimbo()
             self.limboDidChange()
-            proxy.insertText("2")
+//            proxy.insertText("2")
         }
     }
 
     override func viewWillDisappear(_ animated: Bool) {
-        proxy.insertText("3")
+//        proxy.insertText("3")
 
         super.viewWillDisappear(animated)
         if !limboBuffer.isEmpty {
             insertTextAndTriggerChange(limboBuffer)
             resetLimbo()
             self.limboDidChange()
-            proxy.insertText("4")
+//            proxy.insertText("4")
 
         }
     }

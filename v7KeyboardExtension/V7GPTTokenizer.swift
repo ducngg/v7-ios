@@ -173,22 +173,6 @@ class GPTTokenizer {
         }
         
         var pattern = effectivePattern
-        
-        // 🔹 Special rule: double ending vowel
-        if pattern.count >= 2 {
-            let chars = Array(pattern)
-            let last = chars[chars.count - 1]
-            let secondLast = chars[chars.count - 2]
-
-            if last == secondLast && isVowel(last) {
-                // Enforce shorter word length
-                if word.count != pattern.count - 1 {
-                    return false
-                }
-                // Remove last char from pattern
-                pattern = String(chars.dropLast())
-            }
-        }
 
         // 🔹 Pattern check
         if !effectivePattern.isEmpty {
@@ -361,38 +345,41 @@ class GPTTokenizer {
     }
     
     func signalTearer(signals: String) -> [String] {
-        var parts: [String] = []
-        let chars = Array(signals)
-        var pos = 0
-        let n = chars.count
+        var result: [String] = []
 
-        while pos < n {
-            var lastValidEnd: Int? = nil
+        for segment in signals.split(separator: " ", omittingEmptySubsequences: true) {
+            let chars = Array(segment)
+            var pos = 0
+            let n = chars.count
 
-            var end = pos + 1
-            while end <= n {
-                let sub = String(chars[pos..<end])
-                let range = NSRange(location: 0, length: sub.utf16.count)
+            while pos < n {
+                var lastValidEnd: Int? = nil
 
-                if let match = caytreRegex.firstMatch(in: sub, options: [], range: range),
-                   match.range == range {
-                    lastValidEnd = end
-                } else if lastValidEnd != nil {
-                    break
+                var end = pos + 1
+                while end <= n {
+                    let sub = String(chars[pos..<end])
+                    let range = NSRange(location: 0, length: sub.utf16.count)
+
+                    if let match = caytreRegex.firstMatch(in: sub, options: [], range: range),
+                       match.range == range {
+                        lastValidEnd = end
+                    } else if lastValidEnd != nil {
+                        break
+                    }
+
+                    end += 1
                 }
 
-                end += 1
-            }
-
-            if let validEnd = lastValidEnd {
-                parts.append(String(chars[pos..<validEnd]))
-                pos = validEnd
-            } else {
-                parts.append(String(chars[pos]))
-                pos += 1
+                if let validEnd = lastValidEnd {
+                    result.append(String(chars[pos..<validEnd]))
+                    pos = validEnd
+                } else {
+                    result.append(String(chars[pos]))
+                    pos += 1
+                }
             }
         }
 
-        return parts
+        return result
     }
 }
