@@ -101,7 +101,9 @@ enum Constants {
         case ALPHA_UI_CODE:
             fallthrough
         default:
-            return "ᯅ"
+//            return "ᯅ"
+            return "𡨸"
+//            return "喃"
         }
     }
     

@@ -11,7 +11,6 @@ import CoreML
 class GPTTokenizer {
     let enumDict: [String: Int]
     private let renumList: [String?]
-    private let renumCrtList: [[Any]?]
     private let toneMarks = [
         "◌́": [1, 6], "◌": [0], "◌̀": [2],
         "◌̣": [5, 7], "◌̃": [4], "◌̉": [3]
@@ -27,69 +26,181 @@ class GPTTokenizer {
     private let allowRegex: NSRegularExpression
     private let specialsRegex: NSRegularExpression
     
-    // 🔹 Prefix caches
-    var cachedPatterns: [String: [Int]] = [:]
+    // MARK: - Binary Readers
+    private static func readUInt32(_ data: Data, _ offset: inout Int) -> UInt32 {
 
-    init?() {
-        guard let enumData = GPTTokenizer.loadJSON(name: "enum_21869") as? [String: Int],
-              let renumData = GPTTokenizer.loadJSON(name: "renum_21869") as? [Any],
-              let renumCrtData = GPTTokenizer.loadJSON(name: "renum_crt") as? [Any] else {
+        let b0 = UInt32(data[offset])
+        let b1 = UInt32(data[offset + 1]) << 8
+        let b2 = UInt32(data[offset + 2]) << 16
+        let b3 = UInt32(data[offset + 3]) << 24
+
+        offset += 4
+
+        return b0 | b1 | b2 | b3
+    }
+
+    private static func readUInt16(_ data: Data, _ offset: inout Int) -> UInt16 {
+
+        let b0 = UInt16(data[offset])
+        let b1 = UInt16(data[offset + 1]) << 8
+
+        offset += 2
+
+        return b0 | b1
+    }
+    
+    // MARK: - enum.bin
+    // uint32 count
+    // repeat:
+    //     uint16 keyLength
+    //     utf8 key
+    //     uint32 value
+
+    private static func loadEnumDict() -> [String: Int]? {
+
+        guard
+            let url = Bundle.main.url(forResource: "enum_21869", withExtension: "bin"),
+            let data = try? Data(contentsOf: url)
+        else {
             return nil
         }
-        
-        self.enumDict = enumData
-        self.renumList = renumData as? [String?] ?? []
-        self.renumCrtList = renumCrtData.map { elem in
-            if elem is NSNull { return nil }
-            return elem as? [Any]
-        }
-        // 🔹 Build tone caches, keeping index 0 as nil
-        for entry in self.renumCrtList.dropFirst() {
-            if let e = entry, e.count == 3,
-               let _ = e[0] as? String,     // consonant
-               let _ = e[1] as? String,     // rhyme
-               let eTone = e[2] as? Int {
 
-                if let toneMark = toneMarks.first(where: { $0.value.contains(eTone) })?.key {
-                    self.renumToneList.append(eTone)
-                    self.renumToneMark.append(toneMark)
-                }
+        var offset = 0
+
+        let count = Int(readUInt32(data, &offset))
+
+        var dict: [String: Int] = [:]
+        dict.reserveCapacity(count)
+
+        for _ in 0..<count {
+
+            let len = Int(readUInt16(data, &offset))
+
+            let tokenData = data.subdata(in: offset..<(offset + len))
+            offset += len
+
+            guard let token = String(data: tokenData, encoding: .utf8) else {
+                return nil
+            }
+
+            let id = Int(readUInt32(data, &offset))
+
+            dict[token] = id
+        }
+
+        return dict
+    }
+    
+    // MARK: - token_strings.bin
+    // uint32 count
+    // repeat:
+    //     uint16 length
+    //     utf8 bytes
+
+    private static func loadTokenStrings() -> [String?]? {
+
+        guard
+            let url = Bundle.main.url(forResource: "token_strings_21869", withExtension: "bin"),
+            let data = try? Data(contentsOf: url)
+        else {
+            return nil
+        }
+
+        var offset = 0
+
+        let count = Int(readUInt32(data, &offset))
+
+        var tokens: [String?] = []
+        tokens.reserveCapacity(count)
+
+        for _ in 0..<count {
+
+            let len = Int(readUInt16(data, &offset))
+
+            if len == 0 {
+                tokens.append(nil)
+                continue
+            }
+
+            let bytes = data.subdata(in: offset..<(offset + len))
+            offset += len
+
+            tokens.append(String(data: bytes, encoding: .utf8))
+        }
+
+        return tokens
+    }
+    
+    // MARK: - token_tones.bin
+    // uint32 count
+    // uint8[count]
+
+    private static func loadToneList() -> [Int]? {
+
+        guard
+            let url = Bundle.main.url(forResource: "token_tones", withExtension: "bin"),
+            let data = try? Data(contentsOf: url)
+        else {
+            return nil
+        }
+
+        var offset = 0
+
+        let count = Int(readUInt32(data, &offset))
+
+        var tones: [Int] = []
+        tones.reserveCapacity(count)
+
+        for _ in 0..<count {
+            tones.append(Int(data[offset]))
+            offset += 1
+        }
+
+        return tones
+    }
+    
+    init?() {
+
+        guard
+            let enumDict = Self.loadEnumDict(),
+            let renumList = Self.loadTokenStrings(),
+            let renumToneList = Self.loadToneList()
+        else {
+            return nil
+        }
+
+        self.enumDict = enumDict
+        self.renumList = renumList
+        self.renumToneList = renumToneList
+
+        // Build tone marks
+        self.renumToneMark = []
+
+        for tone in renumToneList {
+            if let mark = toneMarks.first(where: { $0.value.contains(tone) })?.key {
+                self.renumToneMark.append(mark)
+            } else {
+                self.renumToneMark.append("")
             }
         }
-        
-        // ---- Build constants once ----
+
         self.numbers = "0123456789"
         self.specials = ".,!?;:-_()[]{}'\"“”‘’/\\\\@#$%^&*+=<>~|`… "
-        
-        let baseVocab = enumData
-            .filter { (_, id) in (1...Constants.BASE_VIET_VOCAB_SIZE).contains(id) }
-            .map { (token, _) in token }
-        let charset = Set(baseVocab.joined() + specials)
-        let escaped = charset
-            .map { NSRegularExpression.escapedPattern(for: String($0)) }
-            .joined()
-        let allowPattern = "[^ \(escaped)]"
 
-        self.allowRegex = try! NSRegularExpression(pattern: allowPattern, options: [])
-
-        let specialsPattern = "([\(NSRegularExpression.escapedPattern(for: specials))])"
-        self.specialsRegex = try! NSRegularExpression(pattern: specialsPattern, options: [])
-        
-        // 🔹 Load cached patterns (a, b, …, aa, ab, …, zz)
-        let fm = FileManager.default
-        if let resourceURL = Bundle.main.resourceURL {
-            if let files = try? fm.contentsOfDirectory(at: resourceURL, includingPropertiesForKeys: nil) {
-                for file in files where file.pathExtension == "json" {
-                    let key = file.deletingPathExtension().lastPathComponent.lowercased()
-                    // ✅ Only add if key length is 1 or 2
-                    if key.count == 1 || key.count == 2 {
-                        if let arr = GPTTokenizer.loadJSON(url: file) as? [Int] {
-                            cachedPatterns[key] = arr
-                        }
-                    }
-                }
-            }
+        guard
+            let url = Bundle.main.url(forResource: "charset", withExtension: "txt"),
+            let escaped = try? String(contentsOf: url, encoding: .utf8)
+        else {
+            return nil
         }
+
+        self.allowRegex = try! NSRegularExpression(
+            pattern: "[^\(escaped)]"
+        )
+
+        self.specialsRegex = try! NSRegularExpression(
+            pattern: "([\(NSRegularExpression.escapedPattern(for: specials))])"
+        )
 
         keyboardLogger.debug("Done init tokenizer")
     }
@@ -172,7 +283,7 @@ class GPTTokenizer {
             if renumToneMark[idx] != toneMark { return false }
         }
         
-        var pattern = effectivePattern
+        let pattern = effectivePattern
 
         // 🔹 Pattern check
         if !effectivePattern.isEmpty {

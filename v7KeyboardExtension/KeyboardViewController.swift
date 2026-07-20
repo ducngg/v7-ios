@@ -434,6 +434,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         if uiCodeState == Constants.ALPHA_UI_CODE {
             // Set to empty fist so it won't be emitted
             resetLimbo()
+            limboDidChange()
             
             if let lastSpecialIndex = pattern.lastIndex(where: { cooker?.tokenizer?.specials.contains($0) ?? false }) {
                 insertTextAndTriggerChange(word)
@@ -473,7 +474,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         cooker?.updateBias(with: word)
         
         // Final check to clear any remaining underlines
-        self.limboDidChange()
+        limboDidChange()
         self.textDidChange(nil)
     }
     func emitTopPrediction() {
@@ -668,7 +669,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
                         
                         insertTextAndTriggerChange(limboBuffer)
                         resetLimbo()
-                        self.limboDidChange()
+                        limboDidChange()
                     }
                     if (proxy.documentContextBeforeInput ?? "").hasSuffix(" ") {
                         proxy.deleteBackward()
@@ -1030,7 +1031,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
             insertTextAndTriggerChange(limboBuffer)
             resetLimbo()
             insertTextAndTriggerChange(" ")
-            self.limboDidChange()
+            limboDidChange()
             return // Exit early so we don't insert a second space
         }
         
@@ -1054,7 +1055,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
             insertTextAndTriggerChange(limboBuffer)
             resetLimbo()
             insertTextAndTriggerChange("\n")
-            self.limboDidChange()
+            limboDidChange()
             return // Exit early so we don't insert a second space
         }
         
@@ -1137,7 +1138,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
                 // If it's a number, punctuation, or uiCodeState is active, commit immediately
                 insertTextAndTriggerChange(limboBuffer)
                 resetLimbo()
-                self.limboDidChange()
+                limboDidChange()
                 insertTextAndTriggerChange(keyToDisplay)
             }
 		}
@@ -1166,7 +1167,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
                 
                 // 4. Reconstruct the raw buffer (e.g., "nha")
                 limboBuffer = segments.joined()
-                self.limboDidChange()
+                limboDidChange()
             }
             return // Exit because we handled the limbo deletion
         }
@@ -1267,7 +1268,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         if !limboBuffer.isEmpty {
             insertTextAndTriggerChange(limboBuffer)
             resetLimbo()
-            self.limboDidChange()
+            limboDidChange()
 //            proxy.insertText("2")
         }
     }
@@ -1279,7 +1280,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         if !limboBuffer.isEmpty {
             insertTextAndTriggerChange(limboBuffer)
             resetLimbo()
-            self.limboDidChange()
+            limboDidChange()
 //            proxy.insertText("4")
 
         }

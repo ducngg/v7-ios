@@ -370,7 +370,7 @@ final class Cooker {
                 lastToneMark: toneMark,
             ) {
                 validNgrams.append(candidate.text)
-                keyboardLogger.debug("\(candidate.text, privacy: .public) \(toneMark, privacy: .public)")
+//                keyboardLogger.debug("\(candidate.text, privacy: .public) \(toneMark, privacy: .public)")
             }
         }
 
