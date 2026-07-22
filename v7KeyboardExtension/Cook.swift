@@ -332,45 +332,55 @@ final class Cooker {
         toneMark: String,
         extraSuggestion: Int
     ) -> [String] {
+
         let lowerSignals = signals.lowercased()
         let tornSignals = tokenizer?.signalTearer(signals: lowerSignals) ?? []
-        
-        // 1. Get filtered results from LLM predictions (using existing logic)
+
+        // Detect explicit word boundary
+        let forceStop = lowerSignals.hasSuffix(" ")
+
+        // 1. Get filtered results from LLM predictions
         var filteredLLM: [String] = []
 
         // Zero when no signal, >= 2 for multi
         if tornSignals.count <= 1 {
+            let effectiveSignal = signals.trimmingCharacters(in: .whitespaces)
             filteredLLM = tokenizer?.filter(
-                pattern: signals,
+                pattern: effectiveSignal,
                 predictions: predictions,
                 toneMark: toneMark,
-                extraSuggestion: extraSuggestion
+                extraSuggestion: extraSuggestion,
+                forceStop: forceStop,
             ) ?? []
         }
 
         filteredLLM = filteredLLM.filter { ![",", "."].contains($0) }
 
-        // 2. 🔥 Query SQLite N-Grams
+        // 2. Query SQLite N-Grams
         let key = buildKey(from: tornSignals)
 
         var ngramCandidates = ngramDB.queryWithTokens(key: key)
 
-        // NEW: Sort candidates by LLM token probability before matching
-        ngramCandidates = sortNgramCandidates(candidates: ngramCandidates, predictions: predictions)
+        // Sort candidates by LLM token probability
+        ngramCandidates = sortNgramCandidates(
+            candidates: ngramCandidates,
+            predictions: predictions
+        )
 
         // Apply matching with Early Stopping
         var validNgrams: [String] = []
+
         for candidate in ngramCandidates {
             if validNgrams.count >= Constants.NGRAM_TOP_K { break }
-            
+
             if tokenizer!.isMatchNgram(
                 tornSignals: tornSignals,
                 ngram: candidate.text,
                 tokens: candidate.tokens,
                 lastToneMark: toneMark,
+                lastForceStop: forceStop,
             ) {
                 validNgrams.append(candidate.text)
-//                keyboardLogger.debug("\(candidate.text, privacy: .public) \(toneMark, privacy: .public)")
             }
         }
 

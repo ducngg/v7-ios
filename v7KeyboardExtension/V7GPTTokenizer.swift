@@ -275,7 +275,8 @@ class GPTTokenizer {
         effectivePattern: String,
         word: String,
         idx: Int,
-        toneMark: String
+        toneMark: String,
+        forceStop: Bool = false,
     ) -> Bool {
         // 🔹 Tone check
         if !toneMark.isEmpty {
@@ -289,6 +290,10 @@ class GPTTokenizer {
         if !effectivePattern.isEmpty {
             // If remove this, effectivePattern="thanh" will still match word="tha"
             if word.count < pattern.count {
+                return false
+            }
+            // Same length
+            if forceStop && (word.count != pattern.count) {
                 return false
             }
             
@@ -308,7 +313,8 @@ class GPTTokenizer {
         pattern: String,
         predictions: PredictionResult,
         toneMark: String,
-        extraSuggestion: Int
+        extraSuggestion: Int,
+        forceStop: Bool = false,
     ) -> [String] {
         let predictionIds = predictions.candidates
         var result: [String] = []
@@ -330,7 +336,7 @@ class GPTTokenizer {
             currentPattern = String(currentPattern[firstNonSpecialIndex...])
         }
         
-        var effectiveToneMark = toneMark
+        let effectiveToneMark = toneMark
         var effectivePattern = currentPattern
         
         effectivePattern = effectivePattern.lowercased()
@@ -343,7 +349,13 @@ class GPTTokenizer {
             if iterate > max_iterate { break }
             guard idx < renumList.count else { continue }
             guard let word = renumList[idx] else { continue }
-            if isMatch(effectivePattern: effectivePattern, word: word, idx: idx, toneMark: effectiveToneMark) {
+            if isMatch(
+                effectivePattern: effectivePattern,
+                word: word,
+                idx: idx,
+                toneMark: effectiveToneMark,
+                forceStop: forceStop,
+            ) {
                 result.append(word)
                 if result.count >= Constants.LLM_TOP_K + extraSuggestion { break }
             }
@@ -363,6 +375,7 @@ class GPTTokenizer {
         ngram: String,
         tokens: [Int],
         lastToneMark: String,
+        lastForceStop: Bool = false,
     ) -> Bool {
         // 1. Split the N-Gram text into individual words
         // We use lowercased to match your tokenizer's normalization
@@ -385,23 +398,16 @@ class GPTTokenizer {
             let toneMark = (i == tornSignals.count - 1)
                 ? lastToneMark
                 : ""
-            
-//            // Check if signal ends with a vowel
-//            if let lastChar = signal.last?.lowercased(), vowels.contains(Character(lastChar)) {
-//                // Insert one more of that vowel at the end
-//                signal.append(lastChar)
-//            }
-            
-            // We call your existing isMatch logic.
-            // We pass empty toneMark as requested.
-            // idx is usually used for position-based logic in tokenizers.
-            // Use tone mark only for the last signal
+            let forceStop = (i == tornSignals.count - 1)
+                ? lastForceStop
+                : false
 
             if !isMatch(
                 effectivePattern: signal,
                 word: word,
                 idx: token,
-                toneMark: toneMark
+                toneMark: toneMark,
+                forceStop: forceStop,
             ) {
                 return false
             }
