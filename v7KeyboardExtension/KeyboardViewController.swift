@@ -1028,9 +1028,16 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
     func handleSpace() {
         // 1. Handle Limbo/ALPHA state first
         if uiCodeState == Constants.ALPHA_UI_CODE && !limboBuffer.isEmpty {
+            let endsWithSpace = limboBuffer.last == " "
+
             insertTextAndTriggerChange(limboBuffer)
             resetLimbo()
-            insertTextAndTriggerChange(" ")
+
+            // Only insert an extra space if the buffer didn't already end with one.
+            if !endsWithSpace {
+                insertTextAndTriggerChange(" ")
+            }
+
             limboDidChange()
             return // Exit early so we don't insert a second space
         }
