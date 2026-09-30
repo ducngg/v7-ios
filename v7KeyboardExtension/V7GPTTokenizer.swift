@@ -276,8 +276,19 @@ class GPTTokenizer {
         word: String,
         idx: Int,
         toneMark: String,
-        forceStop: Bool = false,
+        activateForceStop: Bool = false,
     ) -> Bool {
+        var forceStop = false
+        
+        // Force stop if pattern ends with a vowel (except ie ye)
+        if !effectivePattern.hasSuffix("ie") && !effectivePattern.hasSuffix("ye"),
+           let lastChar = effectivePattern.last,
+           isVowel(lastChar) {
+            forceStop = true
+        }
+        
+        forceStop = forceStop && activateForceStop
+
         // 🔹 Tone check
         if !toneMark.isEmpty {
             if idx < 1 || idx > Constants.BASE_VIET_VOCAB_SIZE { return false }
@@ -314,7 +325,7 @@ class GPTTokenizer {
         predictions: PredictionResult,
         toneMark: String,
         extraSuggestion: Int,
-        forceStop: Bool = false,
+        activateForceStop: Bool = false,
     ) -> [String] {
         let predictionIds = predictions.candidates
         var result: [String] = []
@@ -354,7 +365,7 @@ class GPTTokenizer {
                 word: word,
                 idx: idx,
                 toneMark: effectiveToneMark,
-                forceStop: forceStop,
+                activateForceStop: activateForceStop,
             ) {
                 result.append(word)
                 if result.count >= Constants.LLM_TOP_K + extraSuggestion { break }
@@ -375,7 +386,6 @@ class GPTTokenizer {
         ngram: String,
         tokens: [Int],
         lastToneMark: String,
-        lastForceStop: Bool = false,
     ) -> Bool {
         // 1. Split the N-Gram text into individual words
         // We use lowercased to match your tokenizer's normalization
@@ -398,16 +408,14 @@ class GPTTokenizer {
             let toneMark = (i == tornSignals.count - 1)
                 ? lastToneMark
                 : ""
-            let forceStop = (i == tornSignals.count - 1)
-                ? lastForceStop
-                : false
+            let activateForceStop = (i == tornSignals.count - 1)
 
             if !isMatch(
                 effectivePattern: signal,
                 word: word,
                 idx: token,
                 toneMark: toneMark,
-                forceStop: forceStop,
+                activateForceStop: activateForceStop,
             ) {
                 return false
             }
@@ -459,6 +467,11 @@ class GPTTokenizer {
         default:
             return char
         }
+    }
+    
+    func syll_able(_ string: String) -> Bool {
+        let range = NSRange(location: 0, length: string.utf16.count)
+        return caytreRegex.firstMatch(in: string, options: [], range: range)?.range == range
     }
     
     func signalTearer(signals: String) -> [String] {

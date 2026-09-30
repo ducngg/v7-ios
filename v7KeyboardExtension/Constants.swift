@@ -22,7 +22,8 @@ enum Constants {
 //    static let DEFAULT_CONTEXT = "bây giờ"
 
     static let SPACE = "   "
-    static let XPACE = "  "
+//    static let XPACE = "  "
+    static let XPACE = "↹"
     static let ENTER = "⏎"
     static let XENTER = "␣"
     static let EMOJI = "☻"
@@ -237,12 +238,12 @@ enum Constants {
 		["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],
 		["a", "s", "d", "đ", "f", "g", "h", "j", "k", "l"],
 		["⇧", "z", "x", "c", "v", "b", "n", "m", "⌫"],
-		["123", EMOJI, XPACE, SPACE, ENTER]
+		["123", XPACE, SPACE, ENTER]
     ] : [
         ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],
         ["a", "s", "d", "f", "g", "h", "j", "k", "l"],
         ["⇧", "z", "x", "c", "v", "b", "n", "m", "⌫"],
-        ["123", EMOJI, XPACE, SPACE, ENTER]
+        ["123", XPACE, SPACE, ENTER]
     ]
 	static let numberKeys = [
 		["1", "2", "3", "4", "5", "6", "7", "8", "9", "0",],

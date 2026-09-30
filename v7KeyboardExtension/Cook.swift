@@ -336,9 +336,6 @@ final class Cooker {
         let lowerSignals = signals.lowercased()
         let tornSignals = tokenizer?.signalTearer(signals: lowerSignals) ?? []
 
-        // Detect explicit word boundary
-        let forceStop = lowerSignals.hasSuffix(" ")
-
         // 1. Get filtered results from LLM predictions
         var filteredLLM: [String] = []
 
@@ -350,7 +347,7 @@ final class Cooker {
                 predictions: predictions,
                 toneMark: toneMark,
                 extraSuggestion: extraSuggestion,
-                forceStop: forceStop,
+                activateForceStop: true,
             ) ?? []
         }
 
@@ -378,7 +375,6 @@ final class Cooker {
                 ngram: candidate.text,
                 tokens: candidate.tokens,
                 lastToneMark: toneMark,
-                lastForceStop: forceStop,
             ) {
                 validNgrams.append(candidate.text)
             }

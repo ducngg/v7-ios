@@ -780,7 +780,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
             let customMultiplier: CGFloat
             switch key {
             case Constants.EMOJI: customMultiplier = 1.1
-            case Constants.XPACE: customMultiplier = 1.4
+            case Constants.XPACE: customMultiplier = 1.5
             case "⌫": customMultiplier = 1.5
             case "⏎": customMultiplier = 2.2
             case "123": customMultiplier = 1.3
@@ -1044,16 +1044,91 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         
         insertTextAndTriggerChange(" ")
     }
+// // Legacy: Must Xpace while typing
+//    func handleXpace() {
+//        // 1. Handle Limbo/ALPHA state first
+//        if uiCodeState == Constants.ALPHA_UI_CODE && !limboBuffer.isEmpty {
+//            if !limboBuffer.hasSuffix(" ") {
+//                limboBuffer += " "
+//                limboDidChange()
+//            }
+//            return
+//        }
+//        
+//        insertTextAndTriggerChange(" ")
+//    }
+
+    // Smart: Xpace after typing
     func handleXpace() {
         // 1. Handle Limbo/ALPHA state first
         if uiCodeState == Constants.ALPHA_UI_CODE && !limboBuffer.isEmpty {
-            if !limboBuffer.hasSuffix(" ") {
-                limboBuffer += " "
-                limboDidChange()
+            guard let tokenizer = cooker?.tokenizer else { return }
+
+            let segments = tokenizer.signalTearer(signals: limboBuffer)
+
+            // ONLY 1 segment
+            if segments.count == 1 {
+                let lastSegment = segments[0]
+
+                // TRY SPLIT last
+                guard let fixedLast = lastSegment.last else {
+                    return
+                }
+                if tokenizer.syll_able(String(fixedLast)) {
+                    let beforeLast = String(lastSegment.dropLast())
+                    limboBuffer = beforeLast + " " + String(fixedLast)
+                    limboDidChange()
+                }
             }
+            // MULTI SEGMENT
+            else if segments.count > 1 {
+                let secondLastSegment = segments[segments.count - 2]
+                let lastSegment = segments[segments.count - 1]
+
+                // TRY FIX last
+                if let secondLastChar = secondLastSegment.last {
+                    let fixedLast = String(secondLastChar) + lastSegment
+
+                    if tokenizer.syll_able(fixedLast) {
+                        let remaining = segments.dropLast(2).joined(separator: " ")
+                        let secondLastBeforeLast = String(secondLastSegment.dropLast())
+
+                        let prefix = remaining.isEmpty ? "" : remaining + " "
+
+                        limboBuffer =
+                            prefix +
+                            secondLastBeforeLast + " " +
+                            fixedLast
+
+                        limboDidChange()
+                        return
+                    }
+                }
+
+                // TRY SPLIT last
+                guard let fixedLast = lastSegment.last else {
+                    return
+                }
+                if tokenizer.syll_able(String(fixedLast)) {
+                    let remaining = segments.dropLast(2).joined(separator: " ")
+
+                    let prefix = remaining.isEmpty ? "" : remaining + " "
+
+                    let lastBeforeFixed = String(lastSegment.dropLast())
+
+                    limboBuffer =
+                        prefix +
+                        secondLastSegment + " " +
+                        lastBeforeFixed + " " +
+                        String(fixedLast)
+
+                    limboDidChange()
+                }
+            }
+
             return
         }
-        
+
         insertTextAndTriggerChange(" ")
     }
     func handleXenter() {
