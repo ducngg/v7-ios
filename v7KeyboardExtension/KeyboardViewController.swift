@@ -65,6 +65,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
     var currentExtraSuggestion: Int = 0
     var pattern: String = ""
     var limboBuffer: String = ""
+    var limboSegments: [String] = []
 
 	enum KeyboardState{
 		case letters
@@ -326,10 +327,10 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         }
     }
     private func loadMoreSuggestions() {
-        guard currentExtraSuggestion < Constants.EXTRA_SUGGESTION_MAX else { return }
-
-        currentExtraSuggestion += Constants.EXTRA_SUGGESTION_STEP
-        updateSuggestions()
+//        guard currentExtraSuggestion < Constants.EXTRA_SUGGESTION_MAX else { return }
+//
+//        currentExtraSuggestion += Constants.EXTRA_SUGGESTION_STEP
+//        updateSuggestions()
         
     }
     
@@ -384,10 +385,14 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
 
         // 3. Fetch suggestions from your logic engine
         var filtered = cooker.cookSuggestions(
-            signals: activeSignals,
+            segments: limboSegments,
             predictions: currentPrediction,
             toneMark: currentTone,
-            extraSuggestion: currentExtraSuggestion
+            extraSuggestion: currentExtraSuggestion,
+            input: lastInputArray!,
+            biasVector: cooker.biasVectorManager?.biasVector ?? [],
+            alpha: Constants.BIAS_ALPHA,
+            temperature: Constants.TEMPERATURE,
         )
         
         if filtered.isEmpty {
@@ -395,12 +400,9 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
             reloadLiveLimbo(tear: false)
         }
         
-        // 4. Extract segments from the actual user buffer
-        let segments = cooker.tokenizer!.signalTearer(signals: limboBuffer)
-
         // 5. Adjust case for all filtered suggestions mapping against the segments
         filtered = filtered.map { phrase in
-            return adjustCase(for: phrase, segments: segments)
+            return adjustCase(for: phrase, segments: limboSegments)
         }
 
         // 🟦 Show ALL suggestions in the bar (including the first one)
@@ -432,15 +434,19 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         guard let word = sender.title(for: .normal) else { return }
         
         if uiCodeState == Constants.ALPHA_UI_CODE {
-            // Set to empty fist so it won't be emitted
-            resetLimbo()
-            limboDidChange()
             
             if let lastSpecialIndex = pattern.lastIndex(where: { cooker?.tokenizer?.specials.contains($0) ?? false }) {
                 insertTextAndTriggerChange(word)
             } else {
                 insertTextAndTriggerChange(word + " ")
             }
+            // Set to empty fist so it won't be emitted
+            let phraseSegments = word
+                .split(separator: " ")
+                .map(String.init)
+
+            removeFirstLimboSegments(phraseSegments.count)
+            limboDidChange()
         } else {
             // 🔸 Legacy Logic for committed patterns (Normal State)
             if let lastSpecialIndex = pattern.lastIndex(where: { cooker?.tokenizer?.specials.contains($0) ?? false }) {
@@ -459,6 +465,9 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         
         // 🔸 UI Cleanup
         suggestionBar?.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        suggestionBar?.layoutIfNeeded()
+        suggestionScrollView?.layoutIfNeeded()
+        suggestionScrollView?.setContentOffset(.zero, animated: false)
         
         // 🔸 Reset state
         if !fromRadialMenu {
@@ -508,6 +517,16 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         textDocumentProxy.unmarkText()
     }
     
+    private func removeFirstLimboSegments(_ n: Int) {
+        guard n > 0 else { return }
+        
+        let removeCount = min(n, limboSegments.count)
+            guard removeCount > 0 else { return }
+
+        limboSegments.removeFirst(removeCount)
+        limboBuffer = limboSegments.joined(separator: " ")
+    }
+    
     func reloadLiveLimbo(tear: Bool = true) {
         guard let cooker = self.cooker, let tokenizer = cooker.tokenizer else {
             return
@@ -520,13 +539,14 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
             
             // Optional: Follow up with unmark to fully close the session
             textDocumentProxy.unmarkText()
+            limboSegments = []
             return
         }
 
         let displayString: String
         if tear {
-            let segments = tokenizer.signalTearer(signals: limboBuffer)
-            displayString = segments.joined(separator: " ")
+            limboSegments = tokenizer.signalTearer(signals: limboBuffer)
+            displayString = limboSegments.joined(separator: " ")
         } else {
             displayString = limboBuffer
         }
@@ -1003,7 +1023,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
 		keyboardState = .symbols
 		loadKeys()
 	}
-    func handleDeleteButtonPressed() {
+    func handleDelete() {
         if uiCodeState == Constants.ALPHA_UI_CODE && !limboBuffer.isEmpty {
             deleteLimboAndTriggerChange()
         } else {
@@ -1057,75 +1077,78 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
 //        
 //        insertTextAndTriggerChange(" ")
 //    }
+    
+    func toggleLimbo() {
+        guard let tokenizer = cooker?.tokenizer else { return }
+        let segments = tokenizer.signalTearer(signals: limboBuffer)
+
+        // ONLY 1 segment
+        if segments.count == 1 {
+            let lastSegment = segments[0]
+
+            // TRY SPLIT last
+            guard let fixedLast = lastSegment.last else {
+                return
+            }
+            if tokenizer.syll_able(String(fixedLast)) {
+                let beforeLast = String(lastSegment.dropLast())
+                limboBuffer = beforeLast + " " + String(fixedLast)
+                limboDidChange()
+            }
+        }
+        // MULTI SEGMENT
+        else if segments.count > 1 {
+            let secondLastSegment = segments[segments.count - 2]
+            let lastSegment = segments[segments.count - 1]
+            
+            // TRY FIX last
+            
+            if let secondLastChar = secondLastSegment.last {
+                let fixedLast = String(secondLastChar) + lastSegment
+                
+                if tokenizer.syll_able(fixedLast) {
+                    let remaining = segments.dropLast(2).joined(separator: " ")
+                    let secondLastBeforeLast = String(secondLastSegment.dropLast())
+                    
+                    let prefix = remaining.isEmpty ? "" : remaining + " "
+                    
+                    limboBuffer =
+                    prefix +
+                    secondLastBeforeLast + " " +
+                    fixedLast
+                    
+                    limboDidChange()
+                    return
+                }
+            }
+            
+            // TRY SPLIT last
+            guard let fixedLast = lastSegment.last else {
+                return
+            }
+            if tokenizer.syll_able(String(fixedLast)) {
+                let remaining = segments.dropLast(2).joined(separator: " ")
+                
+                let prefix = remaining.isEmpty ? "" : remaining + " "
+                
+                let lastBeforeFixed = String(lastSegment.dropLast())
+                
+                limboBuffer =
+                prefix +
+                secondLastSegment + " " +
+                lastBeforeFixed + " " +
+                String(fixedLast)
+                
+                limboDidChange()
+            }
+        }
+    }
 
     // Smart: Xpace after typing
     func handleXpace() {
         // 1. Handle Limbo/ALPHA state first
         if uiCodeState == Constants.ALPHA_UI_CODE && !limboBuffer.isEmpty {
-            guard let tokenizer = cooker?.tokenizer else { return }
-
-            let segments = tokenizer.signalTearer(signals: limboBuffer)
-
-            // ONLY 1 segment
-            if segments.count == 1 {
-                let lastSegment = segments[0]
-
-                // TRY SPLIT last
-                guard let fixedLast = lastSegment.last else {
-                    return
-                }
-                if tokenizer.syll_able(String(fixedLast)) {
-                    let beforeLast = String(lastSegment.dropLast())
-                    limboBuffer = beforeLast + " " + String(fixedLast)
-                    limboDidChange()
-                }
-            }
-            // MULTI SEGMENT
-            else if segments.count > 1 {
-                let secondLastSegment = segments[segments.count - 2]
-                let lastSegment = segments[segments.count - 1]
-
-                // TRY FIX last
-                if let secondLastChar = secondLastSegment.last {
-                    let fixedLast = String(secondLastChar) + lastSegment
-
-                    if tokenizer.syll_able(fixedLast) {
-                        let remaining = segments.dropLast(2).joined(separator: " ")
-                        let secondLastBeforeLast = String(secondLastSegment.dropLast())
-
-                        let prefix = remaining.isEmpty ? "" : remaining + " "
-
-                        limboBuffer =
-                            prefix +
-                            secondLastBeforeLast + " " +
-                            fixedLast
-
-                        limboDidChange()
-                        return
-                    }
-                }
-
-                // TRY SPLIT last
-                guard let fixedLast = lastSegment.last else {
-                    return
-                }
-                if tokenizer.syll_able(String(fixedLast)) {
-                    let remaining = segments.dropLast(2).joined(separator: " ")
-
-                    let prefix = remaining.isEmpty ? "" : remaining + " "
-
-                    let lastBeforeFixed = String(lastSegment.dropLast())
-
-                    limboBuffer =
-                        prefix +
-                        secondLastSegment + " " +
-                        lastBeforeFixed + " " +
-                        String(fixedLast)
-
-                    limboDidChange()
-                }
-            }
-
+            toggleLimbo()
             return
         }
 
@@ -1170,6 +1193,12 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
         
         // 1. Remove the last character from the buffer
         limboBuffer.removeLast()
+        
+        // 2. Remove trailing space
+        if limboBuffer.hasSuffix(" ") {
+            limboBuffer.removeLast()
+        }
+
         limboDidChange()
     }
 	@IBAction func keyPressedTouchUp(_ sender: UIButton) {
@@ -1183,7 +1212,7 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
                     shiftButtonState = .normal
                     loadKeys()
                 }
-                handleDeleteButtonPressed()
+                handleDelete()
                 resetCurrentTone()
 
             case Constants.SPACE:

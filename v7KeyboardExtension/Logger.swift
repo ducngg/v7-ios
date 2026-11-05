@@ -12,3 +12,8 @@ let keyboardLogger = Logger(
     subsystem: "com.ducngg.v7.keyboard",
     category: "Keyboard"
 )
+
+let cookLogger = Logger(
+    subsystem: "com.ducngg.v7.keyboard",
+    category: "Keyboard"
+)

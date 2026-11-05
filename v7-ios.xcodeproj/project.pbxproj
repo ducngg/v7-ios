@@ -18,6 +18,8 @@
 		38BD215B22D5A26900C6795D /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38BD215A22D5A26900C6795D /* Constants.swift */; };
 		38DD94F122D6A40000FF8845 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DD94F022D6A40000FF8845 /* Extensions.swift */; };
 		89195C802E61ABFC00DEBD52 /* Logger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89195C7F2E61ABF900DEBD52 /* Logger.swift */; };
+		89827BFC307FE08A000D03EB /* signal_heap.bin in Resources */ = {isa = PBXBuildFile; fileRef = 89827BFB307FE08A000D03EB /* signal_heap.bin */; };
+		89827BFE307FE4B6000D03EB /* enumi2heapi.bin in Resources */ = {isa = PBXBuildFile; fileRef = 89827BFD307FE4B6000D03EB /* enumi2heapi.bin */; };
 		8994578C2E08335C00B2DBEF /* V7GPTTokenizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8994578B2E08335300B2DBEF /* V7GPTTokenizer.swift */; };
 		89ADADD82FAA5062002BFA81 /* Cook.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89ADADD72FAA5062002BFA81 /* Cook.swift */; };
 		89E049782E7067F80098D94C /* CacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89E049772E7067F80098D94C /* CacheManager.swift */; };
@@ -73,6 +75,8 @@
 		89195C7F2E61ABF900DEBD52 /* Logger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logger.swift; sourceTree = "<group>"; };
 		896C77C62F94EAA800D439CE /* Config.Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.Release.xcconfig; sourceTree = "<group>"; };
 		896C77C72F94EB0E00D439CE /* Config.Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.Debug.xcconfig; sourceTree = "<group>"; };
+		89827BFB307FE08A000D03EB /* signal_heap.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = signal_heap.bin; sourceTree = "<group>"; };
+		89827BFD307FE4B6000D03EB /* enumi2heapi.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = enumi2heapi.bin; sourceTree = "<group>"; };
 		8994578B2E08335300B2DBEF /* V7GPTTokenizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = V7GPTTokenizer.swift; sourceTree = "<group>"; };
 		89ADADD72FAA5062002BFA81 /* Cook.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Cook.swift; sourceTree = "<group>"; };
 		89E049772E7067F80098D94C /* CacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CacheManager.swift; sourceTree = "<group>"; };
@@ -145,6 +149,8 @@
 				89ADADD72FAA5062002BFA81 /* Cook.swift */,
 				89EFF4B52FAB7097007F63E4 /* CayTre.swift */,
 				8994578B2E08335300B2DBEF /* V7GPTTokenizer.swift */,
+				89827BFB307FE08A000D03EB /* signal_heap.bin */,
+				89827BFD307FE4B6000D03EB /* enumi2heapi.bin */,
 				89EFF4CA2FAFC362007F63E4 /* v7ngram-2.0-20260510.[234]lookup.sqlite */,
 				89E0497D2E70952C0098D94C /* BiasVectorManager.swift */,
 				89E049772E7067F80098D94C /* CacheManager.swift */,
@@ -256,8 +262,10 @@
 			files = (
 				89EFF4CB2FAFC362007F63E4 /* v7ngram-2.0-20260510.[234]lookup.sqlite in Resources */,
 				89FAAA3D300E667D007434CF /* token_strings_21869.bin in Resources */,
+				89827BFC307FE08A000D03EB /* signal_heap.bin in Resources */,
 				89FAAA3E300E667D007434CF /* token_tones.bin in Resources */,
 				89FAAA3F300E667D007434CF /* charset.txt in Resources */,
+				89827BFE307FE4B6000D03EB /* enumi2heapi.bin in Resources */,
 				89FAAA40300E667D007434CF /* enum_21869.bin in Resources */,
 				38BD215922D5935A00C6795D /* Keyboard.xib in Resources */,
 			);

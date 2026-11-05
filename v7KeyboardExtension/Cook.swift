@@ -33,11 +33,15 @@ class NGramDatabase {
         sqlite3_exec(db, "PRAGMA temp_store = FILE;", nil, nil, nil)
     }
 
-    func queryWithTokens(key: String) -> [NGramEntryWithTokens] {
+    func queryWithTokens(
+        key: String,
+        limit: Int = Constants.NGRAM_LIMIT_QUERY
+    ) -> [NGramEntryWithTokens] {
         // 1. Check if we already have this key in the cache
         if key == lastQueryKey {
             return cachedResults
         }
+
         // 2. Query
         var statement: OpaquePointer?
         let query = """
@@ -45,7 +49,7 @@ class NGramDatabase {
         FROM ngrams
         WHERE key = ?
         ORDER BY score DESC
-        LIMIT \(Constants.NGRAM_LIMIT_QUERY)
+        LIMIT \(limit)
         """
         var results: [NGramEntryWithTokens] = []
 
@@ -88,6 +92,18 @@ class NGramDatabase {
         sqlite3_close(db)
     }
 }
+
+private struct LLMCacheKey: Hashable {
+    let input: [Int32]
+    let biasVector: [Float]
+    let alpha: Float
+    let temperature: Float
+}
+
+private var llmCache: [LLMCacheKey: PredictionResult] = [:]
+private var llmCacheOrder: [LLMCacheKey] = []
+
+private let llmCacheLimit = 32
 
 final class Cooker {
 
@@ -156,12 +172,41 @@ final class Cooker {
         alpha: Float,
         temperature: Float
     ) -> PredictionResult? {
+
         guard let model = self.LLM else { return nil }
 
+        // MARK: - Cache lookup
+
+        let inputTokens: [Int32] = (0..<input.count).map {
+            input[$0].int32Value
+        }
+
+        let key = LLMCacheKey(
+            input: inputTokens,
+            biasVector: biasVector,
+            alpha: alpha,
+            temperature: temperature
+        )
+
+        if let cached = llmCache[key] {
+            // Move to MRU
+            if let index = llmCacheOrder.firstIndex(of: key) {
+                llmCacheOrder.remove(at: index)
+            }
+            llmCacheOrder.append(key)
+            cookLogger.debug("CACHE HIT!")
+
+            return cached
+        }
+
+        // MARK: - LLM inference
+
         do {
-            guard let biasArray = makeMLMultiArray(from: biasVector),
-                  let alphaArray = makeMLMultiArray(from: alpha),
-                  let temperatureArray = makeMLMultiArray(from: temperature) else {
+            guard
+                let biasArray = makeMLMultiArray(from: biasVector),
+                let alphaArray = makeMLMultiArray(from: alpha),
+                let temperatureArray = makeMLMultiArray(from: temperature)
+            else {
                 return nil
             }
 
@@ -172,21 +217,41 @@ final class Cooker {
                 temperature: temperatureArray
             )
 
-            // 1. Get sorted IDs (Candidates)
-            // Convert [Int32] to [Int]
-            let candidates = output.ranked_desc_token_idsShapedArray.scalars.map { Int($0) }
-            
-            // 2. Get the corresponding scores (Probabilities)
-            // Note: probsArray[scalarAt:] is fast, but we map it into a clean [Float] array
+            // 1. Get sorted IDs
+            let candidates = output
+                .ranked_desc_token_idsShapedArray
+                .scalars
+                .map { Int($0) }
+
+            // 2. Get corresponding probabilities
             let probsArray = output.final_probsShapedArray
+
             let scores = candidates.map { id in
                 Float(probsArray[scalarAt: id])
             }
 
-            return (candidates: candidates, scores: scores)
+            let result: PredictionResult = (
+                candidates: candidates,
+                scores: scores
+            )
+
+            // MARK: - Insert into LRU
+
+            llmCache[key] = result
+            llmCacheOrder.append(key)
+
+            // Evict oldest
+            if llmCacheOrder.count > llmCacheLimit {
+                let oldest = llmCacheOrder.removeFirst()
+                llmCache.removeValue(forKey: oldest)
+            }
+
+            return result
 
         } catch {
-            keyboardLogger.error("Prediction error: \(error.localizedDescription)")
+            keyboardLogger.error(
+                "Prediction error: \(error.localizedDescription)"
+            )
             return nil
         }
     }
@@ -326,79 +391,227 @@ final class Cooker {
             .map(\.candidate)
     }
     
+//    func cookSuggestions(
+//        segments: [String],
+//        predictions: PredictionResult,
+//        toneMark: String,
+//        extraSuggestion: Int,
+//        ngram_top_k: Int = Constants.NGRAM_TOP_K,
+//        
+//        // Initial context
+//        input: MLMultiArray,
+//        biasVector: [Float],
+//        alpha: Float,
+//        temperature: Float
+//    ) -> [String] {
+//
+//        let segments = segments.map { $0.lowercased() }
+//
+//        // 1. Get filtered results from LLM predictions
+//        var outs: [String] = []
+//
+//        // Zero when no signal, >= 2 for multi
+//        if segments.count <= 1 {
+//            let effectiveSignal = segments.first ?? ""
+//            outs = tokenizer?.filter(
+//                pattern: effectiveSignal,
+//                predictions: predictions,
+//                toneMark: toneMark,
+//                extraSuggestion: extraSuggestion,
+//                activateForceStop: true,
+//            ) ?? []
+//        }
+//
+//        outs = outs.filter { ![",", "."].contains($0) }
+//
+//        // 2. Query SQLite N-Grams
+//        let key = buildKey(from: segments)
+//
+//        var ngramCandidates = ngramDB.queryWithTokens(key: key)
+//
+//        // Sort candidates by LLM token probability
+//        ngramCandidates = sortNgramCandidates(
+//            candidates: ngramCandidates,
+//            predictions: predictions
+//        )
+//
+//        for candidate in ngramCandidates {
+//            if outs.count >= ngram_top_k { break }
+//
+//            if tokenizer!.isMatchNgram(
+//                tornSignals: segments,
+//                ngram: candidate.text,
+//                tokens: candidate.tokens,
+//                lastToneMark: toneMark,
+//            ) {
+//                outs.append(candidate.text)
+//            }
+//        }
+//
+//        return outs
+//    }
     func cookSuggestions(
-        signals: String,
+        segments: [String],
         predictions: PredictionResult,
         toneMark: String,
-        extraSuggestion: Int
+        extraSuggestion: Int,
+        ngram_top_k: Int = Constants.NGRAM_TOP_K,
+        
+        // Initial context
+        input: MLMultiArray,
+        biasVector: [Float],
+        alpha: Float,
+        temperature: Float,
+        
+        fallback: Bool = true,
+        master: Bool = true,
     ) -> [String] {
+        
+        if segments.contains(where: { $0.contains { "fjwz".contains($0) } }) {
+            return []
+        }
+        
+        if segments.count > 16 {
+            return []
+        }
 
-        let lowerSignals = signals.lowercased()
-        let tornSignals = tokenizer?.signalTearer(signals: lowerSignals) ?? []
+        let segments = segments.map { $0.lowercased() }
 
-        // 1. Get filtered results from LLM predictions
-        var filteredLLM: [String] = []
+        // MARK: - 1. LLM suggestions for <= 1 segment
+        var toks: [String] = []
+        var ngrams: [String] = []
 
-        // Zero when no signal, >= 2 for multi
-        if tornSignals.count <= 1 {
-            let effectiveSignal = signals.trimmingCharacters(in: .whitespaces)
-            filteredLLM = tokenizer?.filter(
+        if segments.count <= 1 || master {
+            let effectiveSignal = segments.first ?? ""
+
+            toks = tokenizer?.filter(
                 pattern: effectiveSignal,
                 predictions: predictions,
                 toneMark: toneMark,
                 extraSuggestion: extraSuggestion,
-                activateForceStop: true,
+                activateForceStop: true
             ) ?? []
-        }
-
-        filteredLLM = filteredLLM.filter { ![",", "."].contains($0) }
-
-        // 2. Query SQLite N-Grams
-        let key = buildKey(from: tornSignals)
-
-        var ngramCandidates = ngramDB.queryWithTokens(key: key)
-
-        // Sort candidates by LLM token probability
-        ngramCandidates = sortNgramCandidates(
-            candidates: ngramCandidates,
-            predictions: predictions
-        )
-
-        // Apply matching with Early Stopping
-        var validNgrams: [String] = []
-
-        for candidate in ngramCandidates {
-            if validNgrams.count >= Constants.NGRAM_TOP_K { break }
-
-            if tokenizer!.isMatchNgram(
-                tornSignals: tornSignals,
-                ngram: candidate.text,
-                tokens: candidate.tokens,
-                lastToneMark: toneMark,
-            ) {
-                validNgrams.append(candidate.text)
+            toks = toks.filter { ![",", "."].contains($0) }
+            
+            if segments.count <= 1 {
+                return toks
             }
         }
 
-        // 3. Combine: N-Grams on top for better UX, followed by LLM results
-        // We use Set to prevent duplicates if the same word is in both N-Gram and LLM
-        var seen = Set<String>()
-        var finalResult: [String] = []
-
-        for word in validNgrams {
-            if !seen.contains(word) {
-                finalResult.append(word)
-                seen.insert(word)
+        // MARK: - 2. Exact N-Gram lookup
+        if segments.count <= 4 {
+            let key = buildKey(from: segments)
+            var ngramCandidates = ngramDB.queryWithTokens(
+                key: key
+            )
+            
+            ngramCandidates = sortNgramCandidates(
+                candidates: ngramCandidates,
+                predictions: predictions
+            )
+            
+            for candidate in ngramCandidates {
+                if ngrams.count >= ngram_top_k {
+                    break
+                }
+                
+                if tokenizer!.isMatchNgram(
+                    tornSignals: segments,
+                    ngram: candidate.text,
+                    tokens: candidate.tokens,
+                    lastToneMark: toneMark
+                ) {
+                    ngrams.append(candidate.text)
+                }
             }
         }
 
-        for word in filteredLLM {
-            if !seen.contains(word) {
-                finalResult.append(word)
-                seen.insert(word)
+        // If we found suggestions normally, we're done.
+        if !ngrams.isEmpty {
+            if master {
+                return Array(ngrams.prefix(4)) + Array(toks)
+            }
+            return Array(ngrams.prefix(ngram_top_k))
+        }
+
+        // MARK: - 3. Fallback section for unmatched (where no return above) (covers >4 segments)
+        guard fallback else {
+            // This is when no sub-ngram for sub-segments -> Recursion logic automatically break the sub-segments more as below
+            return []
+        }
+        
+        // Try prefixes:
+        // segments[0..<1]
+        // segments[0..<2]
+        // ...
+        // segments[0..<s-1]
+        for prefixLength in stride(from: segments.count - 1, through: 1, by: -1) {
+            let prefixSegments = Array(segments.prefix(prefixLength))
+            let latterSegments = Array(segments.dropFirst(prefixLength))
+
+            cookLogger.debug(
+                "NO NGRAM LEN \(segments.count) -> SPLIT [\(prefixSegments.joined(separator: ", "), privacy: .public)] & [\(latterSegments.joined(separator: ", "), privacy: .public)]"
+            )
+            
+            let prefixOuts = cookSuggestions(
+                segments: prefixSegments,
+                predictions: predictions,
+                toneMark: "",
+                extraSuggestion: extraSuggestion,
+                ngram_top_k: master ? 3 : 2,
+                input: input,
+                biasVector: biasVector,
+                alpha: alpha,
+                temperature: temperature,
+                fallback: false, // Prevent recursion at this
+                master: false,
+            )
+
+            guard let prefixSuggestion = prefixOuts.first else {
+                continue
+            }
+
+            // MARK: - 4. Add prefix suggestion to LLM context
+            let newInput = tokenizer!.concat_tokens(
+                input,
+                prefixSuggestion
+            )
+
+            guard let newPredictions = llm_predict(
+                input: newInput,
+                biasVector: biasVector,
+                alpha: alpha,
+                temperature: temperature
+            ) else {
+                continue
+            }
+
+            let finalOuts = cookSuggestions(
+                segments: latterSegments,
+                predictions: newPredictions,
+                toneMark: toneMark,
+                extraSuggestion: extraSuggestion,
+                ngram_top_k: 4,
+                input: newInput,
+                biasVector: biasVector,
+                alpha: alpha,
+                temperature: temperature,
+                master: false,
+            )
+
+            if !finalOuts.isEmpty {
+                let combinedOuts = finalOuts.prefix(1).map { latterOut in
+                    prefixSuggestion + " " + latterOut
+                }
+
+                if master {
+                    return Array(combinedOuts.prefix(2)) + Array(prefixOuts.prefix(4)) + Array(toks.prefix(16))
+                }
+
+                return combinedOuts
             }
         }
 
-        return finalResult
+        return []
     }
 }

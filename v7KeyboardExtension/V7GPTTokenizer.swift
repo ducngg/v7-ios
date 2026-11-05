@@ -19,6 +19,8 @@ class GPTTokenizer {
     // 🔹 Cached parallel lists (index 0 reserved as nil/empty)
     private(set) var renumToneList: [Int?] = [nil]
     private(set) var renumToneMark: [String?] = [nil]
+    private(set) var signalHeap: [String: (start: Int, end: Int)] = [:]
+    private(set) var enumi2heapi: [Int] = []
     
     // New cached regex + specials
     let specials: String
@@ -159,12 +161,79 @@ class GPTTokenizer {
         return tones
     }
     
+    private static func loadHeapNode() -> [String: (start: Int, end: Int)]? {
+        guard
+            let url = Bundle.main.url(forResource: "signal_heap", withExtension: "bin"),
+            let data = try? Data(contentsOf: url)
+        else {
+            return nil
+        }
+
+        var offset = 0
+
+        let count = Int(readUInt32(data, &offset))
+
+        var dict: [String: (start: Int, end: Int)] = [:]
+        dict.reserveCapacity(count)
+
+        for _ in 0..<count {
+            let len = Int(readUInt16(data, &offset))
+
+            let prefixData = data.subdata(in: offset..<(offset + len))
+            offset += len
+
+            guard let prefix = String(data: prefixData, encoding: .utf8) else {
+                return nil
+            }
+
+            let start = Int(readUInt32(data, &offset))
+            let end = Int(readUInt32(data, &offset))
+
+            dict[prefix] = (start: start, end: end)
+        }
+
+        return dict
+    }
+    
+    private static func loadEnumi2heapi() -> [Int]? {
+        guard
+            let url = Bundle.main.url(
+                forResource: "enumi2heapi",
+                withExtension: "bin"
+            ),
+            let data = try? Data(contentsOf: url),
+            data.count >= 4
+        else {
+            return nil
+        }
+
+        var offset = 0
+        let count = Int(readUInt32(data, &offset))
+
+        // Validate binary size before reading.
+        guard count <= (data.count - offset) / 4,
+              data.count == 4 + count * 4 else {
+            return nil
+        }
+
+        var result = [Int]()
+        result.reserveCapacity(count)
+
+        for _ in 0..<count {
+            result.append(Int(readUInt32(data, &offset)))
+        }
+
+        return result
+    }
+    
     init?() {
 
         guard
             let enumDict = Self.loadEnumDict(),
             let renumList = Self.loadTokenStrings(),
-            let renumToneList = Self.loadToneList()
+            let renumToneList = Self.loadToneList(),
+            let signalHeap = Self.loadHeapNode(),
+            let enumi2heapi = Self.loadEnumi2heapi()
         else {
             return nil
         }
@@ -172,6 +241,8 @@ class GPTTokenizer {
         self.enumDict = enumDict
         self.renumList = renumList
         self.renumToneList = renumToneList
+        self.signalHeap = signalHeap
+        self.enumi2heapi = enumi2heapi
 
         // Build tone marks
         self.renumToneMark = []
@@ -267,6 +338,49 @@ class GPTTokenizer {
         return array
     }
     
+    func concat_tokens(_ array: MLMultiArray, _ text: String) -> MLMultiArray {
+        let textArray = tokenize(text: text)
+        return concat_tokens(array, textArray)
+    }
+
+    func concat_tokens(_ array1: MLMultiArray, _ array2: MLMultiArray) -> MLMultiArray {
+        func removePadding(_ array: MLMultiArray) -> [Int] {
+            let values = (0..<array.count).map {
+                array[$0].intValue
+            }
+
+            // Remove left padding
+            if let firstNonPad = values.firstIndex(where: { $0 != 0 }) {
+                return Array(values[firstNonPad...])
+            }
+
+            return []
+        }
+
+        var tokens = removePadding(array1)
+        tokens.append(contentsOf: removePadding(array2))
+
+        // Keep only the last MAX_SEQUENCE_LEN tokens
+        tokens = Array(tokens.suffix(Constants.MAX_SEQUENCE_LEN))
+
+        // Left-pad
+        let padded = Array(
+            repeating: 0,
+            count: max(0, Constants.MAX_SEQUENCE_LEN - tokens.count)
+        ) + tokens
+
+        let result = try! MLMultiArray(
+            shape: [NSNumber(value: Constants.MAX_SEQUENCE_LEN)],
+            dataType: .int32
+        )
+
+        for i in 0..<Constants.MAX_SEQUENCE_LEN {
+            result[i] = NSNumber(value: padded[i])
+        }
+
+        return result
+    }
+    
     private func isVowel(_ ch: Character) -> Bool {
         return "aeiouy".contains(ch.lowercased())
     }
@@ -278,10 +392,28 @@ class GPTTokenizer {
         toneMark: String,
         activateForceStop: Bool = false,
     ) -> Bool {
+        if !effectivePattern.isEmpty {
+            guard
+                enumi2heapi.indices.contains(idx),
+                let range = signalHeap[effectivePattern]
+            else {
+                return false
+            }
+
+            let heapIndex = enumi2heapi[idx]
+            guard heapIndex >= range.start && heapIndex <= range.end else {
+                return false
+            }
+        }
         var forceStop = false
         
-        // Force stop if pattern ends with a vowel (except ie ye)
-        if !effectivePattern.hasSuffix("ie") && !effectivePattern.hasSuffix("ye"),
+        // Force stop if pattern ends with a vowel (except some shouldn't lol)
+        if !effectivePattern.hasSuffix("ie")
+            && !effectivePattern.hasSuffix("ye")
+            && !effectivePattern.hasSuffix("uo")
+            && !effectivePattern.hasSuffix("oo")
+            && !effectivePattern.hasSuffix("qu")
+        ,
            let lastChar = effectivePattern.last,
            isVowel(lastChar) {
             forceStop = true
@@ -331,7 +463,8 @@ class GPTTokenizer {
         var result: [String] = []
         var currentPattern = pattern
         
-        if pattern.count > 6 {
+        
+        if pattern.count > 6 || pattern.contains(where: { "fjwz".contains($0) }) {
             return result
         }
         // rule 2: reject if contains digits or forbidden symbols

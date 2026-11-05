@@ -33,8 +33,8 @@ enum Constants {
     static let OMEGA_UI_CODE = 1
     static let NUMBER_OF_UI_CODES: Int = 2
 
-    static let LLM_TOP_K = 16
-    static let MAX_FILTER_ITERATE = 2048 * 3 // 2048
+    static let LLM_TOP_K = 24
+    static let MAX_FILTER_ITERATE = 2048 * 6 // 2048
     static let MAX_FILTER_ITERATE_VIET = VOCAB_SIZE // 16384 // For rare words to be always findable
     
     static let NGRAM_LIMIT_QUERY = 3000
