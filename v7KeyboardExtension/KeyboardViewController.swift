@@ -249,6 +249,12 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
 
         // 🔹 Scroll view for suggestions
         let scrollView = UIScrollView()
+        if #available(iOS 26.0, *) {
+            scrollView.topEdgeEffect.isHidden = true
+            scrollView.bottomEdgeEffect.isHidden = true
+            scrollView.leftEdgeEffect.isHidden = true
+            scrollView.rightEdgeEffect.isHidden = true
+        }
         scrollView.showsHorizontalScrollIndicator = false
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         scrollView.backgroundColor = Constants.backgroundColor
@@ -1170,7 +1176,6 @@ class KeyboardViewController: UIInputViewController, UIScrollViewDelegate {
     // For gradients
 //    override func viewDidLayoutSubviews() {
 //        super.viewDidLayoutSubviews()
-//
 //        for btn in keys {
 //            for layer in btn.layer.sublayers ?? [] {
 //                if let gradient = layer as? CAGradientLayer {
